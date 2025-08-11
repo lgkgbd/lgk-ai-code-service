@@ -16,8 +16,14 @@ const route = useRoute()
 const router = useRouter()
 
 const selectedKeys = computed<string[]>(() => {
-  const found = props.menuItems.find((m) => route.path.startsWith(m.path))
-  return [found?.key ?? '']
+  // 1) 精确匹配优先
+  const exact = props.menuItems.find((m) => m.path === route.path)
+  if (exact) return [exact.key]
+  // 2) 最长前缀匹配（避免 '/' 抢占所有路径）
+  const matched = [...props.menuItems]
+    .filter((m) => route.path.startsWith(m.path))
+    .sort((a, b) => b.path.length - a.path.length)[0]
+  return [matched?.key ?? '']
 })
 
 function onMenuItemClick(path: string) {
