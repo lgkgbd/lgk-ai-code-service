@@ -1,6 +1,13 @@
 spring:
   application:
     name: lgk-ai-code-service-backend
+  # mysql
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/lgk_ai_code_service
+    username: root
+    password: 123456
+
 server:
   port: 8123
   servlet:
