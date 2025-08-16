@@ -31,3 +31,10 @@ build/
 
 ### VS Code ###
 .vscode/
+
+
+### CUSTOM ###
+application-local.yml
+
+### 测试文件 ###
+tmp
