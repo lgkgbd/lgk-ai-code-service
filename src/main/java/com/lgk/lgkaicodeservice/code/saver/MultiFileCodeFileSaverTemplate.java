@@ -1,7 +1,7 @@
-package com.lgk.lgkaicodeservice.saver;
+package com.lgk.lgkaicodeservice.code.saver;
 
 import cn.hutool.core.util.StrUtil;
-import com.lgk.lgkaicodeservice.ai.model.MultiFileCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.MultiFileCodeResult;
 import com.lgk.lgkaicodeservice.ai.model.enums.CodeGenTypeEnum;
 import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
@@ -9,7 +9,6 @@ import com.lgk.lgkaicodeservice.exception.ErrorCode;
 /**
  * 多文件代码保存器
  *
- * @author yupi
  */
 public class MultiFileCodeFileSaverTemplate extends CodeFileSaverTemplate<MultiFileCodeResult> {
 

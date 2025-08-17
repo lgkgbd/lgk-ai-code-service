@@ -1,4 +1,4 @@
-package com.lgk.lgkaicodeservice.model.dto;
+package com.lgk.lgkaicodeservice.model.dto.user;
 
 import lombok.Data;
 

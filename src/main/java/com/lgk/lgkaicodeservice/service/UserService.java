@@ -1,6 +1,6 @@
 package com.lgk.lgkaicodeservice.service;
 
-import com.lgk.lgkaicodeservice.model.dto.UserQueryRequest;
+import com.lgk.lgkaicodeservice.model.dto.user.UserQueryRequest;
 import com.lgk.lgkaicodeservice.model.vo.LoginUserVO;
 import com.lgk.lgkaicodeservice.model.vo.UserVO;
 import com.mybatisflex.core.query.QueryWrapper;

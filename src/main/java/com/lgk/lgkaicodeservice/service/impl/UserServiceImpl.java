@@ -5,7 +5,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
-import com.lgk.lgkaicodeservice.model.dto.UserQueryRequest;
+import com.lgk.lgkaicodeservice.model.dto.user.UserQueryRequest;
 import com.lgk.lgkaicodeservice.model.enums.UserRoleEnum;
 import com.lgk.lgkaicodeservice.model.vo.LoginUserVO;
 import com.lgk.lgkaicodeservice.model.vo.UserVO;

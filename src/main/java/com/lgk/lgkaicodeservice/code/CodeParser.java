@@ -1,7 +1,7 @@
 package com.lgk.lgkaicodeservice.code;
 
-import com.lgk.lgkaicodeservice.ai.model.HtmlCodeResult;
-import com.lgk.lgkaicodeservice.ai.model.MultiFileCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.HtmlCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.MultiFileCodeResult;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -10,8 +10,9 @@ import java.util.regex.Pattern;
  * 代码解析器
  * 提供静态方法解析不同类型的代码内容
  *
- * @author yupi
  */
+
+@Deprecated
 public class CodeParser {
 
     private static final Pattern HTML_CODE_PATTERN = Pattern.compile("```html\\s*\\n([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);

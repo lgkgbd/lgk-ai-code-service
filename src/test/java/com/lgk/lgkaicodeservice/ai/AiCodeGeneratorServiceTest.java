@@ -1,13 +1,12 @@
 package com.lgk.lgkaicodeservice.ai;
 
-import com.lgk.lgkaicodeservice.ai.model.HtmlCodeResult;
-import com.lgk.lgkaicodeservice.ai.model.MultiFileCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.HtmlCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.MultiFileCodeResult;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 class AiCodeGeneratorServiceTest {
 

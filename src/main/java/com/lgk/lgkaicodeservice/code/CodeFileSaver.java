@@ -3,13 +3,14 @@ package com.lgk.lgkaicodeservice.code;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
-import com.lgk.lgkaicodeservice.ai.model.HtmlCodeResult;
-import com.lgk.lgkaicodeservice.ai.model.MultiFileCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.HtmlCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.MultiFileCodeResult;
 import com.lgk.lgkaicodeservice.ai.model.enums.CodeGenTypeEnum;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 
+@Deprecated
 public class CodeFileSaver {
 
     // 文件保存根目录

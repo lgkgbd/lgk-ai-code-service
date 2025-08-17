@@ -1,4 +1,4 @@
-package com.lgk.lgkaicodeservice.ai.model;
+package com.lgk.lgkaicodeservice.ai.model.entity;
 
 import dev.langchain4j.model.output.structured.Description;
 import lombok.Data;

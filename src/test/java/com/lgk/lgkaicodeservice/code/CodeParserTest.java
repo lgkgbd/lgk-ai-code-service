@@ -1,7 +1,7 @@
 package com.lgk.lgkaicodeservice.code;
 
-import com.lgk.lgkaicodeservice.ai.model.HtmlCodeResult;
-import com.lgk.lgkaicodeservice.ai.model.MultiFileCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.HtmlCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.MultiFileCodeResult;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

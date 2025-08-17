@@ -1,6 +1,6 @@
 package com.lgk.lgkaicodeservice.code.parser;
 
-import com.lgk.lgkaicodeservice.ai.model.HtmlCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.HtmlCodeResult;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -8,7 +8,6 @@ import java.util.regex.Pattern;
 /**
  * HTML 单文件代码解析器
  *
- * @author yupi
  */
 public class HtmlCodeParser implements CodeParser<HtmlCodeResult> {
 

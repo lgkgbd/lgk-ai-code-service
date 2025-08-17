@@ -1,7 +1,7 @@
-package com.lgk.lgkaicodeservice.saver;
+package com.lgk.lgkaicodeservice.code.saver;
 
 import cn.hutool.core.util.StrUtil;
-import com.lgk.lgkaicodeservice.ai.model.HtmlCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.HtmlCodeResult;
 import com.lgk.lgkaicodeservice.ai.model.enums.CodeGenTypeEnum;
 import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
@@ -9,7 +9,6 @@ import com.lgk.lgkaicodeservice.exception.ErrorCode;
 /**
  * HTML代码文件保存器
  *
- * @author yupi
  */
 public class HtmlCodeFileSaverTemplate extends CodeFileSaverTemplate<HtmlCodeResult> {
 

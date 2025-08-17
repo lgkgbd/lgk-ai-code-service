@@ -1,7 +1,7 @@
 package com.lgk.lgkaicodeservice.ai;
 
-import com.lgk.lgkaicodeservice.ai.model.HtmlCodeResult;
-import com.lgk.lgkaicodeservice.ai.model.MultiFileCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.HtmlCodeResult;
+import com.lgk.lgkaicodeservice.ai.model.entity.MultiFileCodeResult;
 import dev.langchain4j.service.SystemMessage;
 import reactor.core.publisher.Flux;
 
