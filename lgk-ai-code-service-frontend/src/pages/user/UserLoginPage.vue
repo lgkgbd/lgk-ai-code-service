@@ -51,13 +51,27 @@ const handleSubmit = async (values: any) => {
   // 登录成功，把登录态保存到全局状态中
   if (res.data.code === 0 && res.data.data) {
     await loginUserStore.fetchLoginUser()
-    message.success('登录成功')
+    message.success({
+      content: '登录成功',
+      duration: 3,
+      closable: true,
+      onClick: () => {
+        message.destroy()
+      },
+    })
     router.push({
       path: '/',
       replace: true,
     })
   } else {
-    message.error('登录失败，' + res.data.message)
+    message.error({
+      content: '登录失败，' + res.data.message,
+      duration: 3,
+      closable: true,
+      onClick: () => {
+        message.destroy()
+      },
+    })
   }
 }
 </script>

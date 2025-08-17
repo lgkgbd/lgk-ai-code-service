@@ -72,13 +72,27 @@ const handleSubmit = async (values: API.UserRegisterRequest) => {
   const res = await userRegister(values)
   // 注册成功，跳转到登录页面
   if (res.data.code === 0) {
-    message.success('注册成功')
+    message.success({
+      content: '注册成功',
+      duration: 3,
+      closable: true,
+      onClick: () => {
+        message.destroy()
+      },
+    })
     router.push({
       path: '/user/login',
       replace: true,
     })
   } else {
-    message.error('注册失败，' + res.data.message)
+    message.error({
+      content: '注册失败，' + res.data.message,
+      duration: 3,
+      closable: true,
+      onClick: () => {
+        message.destroy()
+      },
+    })
   }
 }
 </script>

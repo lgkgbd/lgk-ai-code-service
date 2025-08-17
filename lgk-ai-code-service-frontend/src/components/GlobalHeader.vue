@@ -109,13 +109,34 @@ const doLogout = async () => {
       loginUserStore.setLoginUser({
         userName: '未登录',
       })
-      message.success('退出登录成功')
+      message.success({
+        content: '退出登录成功',
+        duration: 3,
+        closable: true,
+        onClick: () => {
+          message.destroy()
+        },
+      })
       await router.push('/user/login')
     } else {
-      message.error('退出登录失败，' + res.data.message)
+      message.error({
+        content: '退出登录失败，' + res.data.message,
+        duration: 3,
+        closable: true,
+        onClick: () => {
+          message.destroy()
+        },
+      })
     }
   } catch {
-    message.error('退出登录失败')
+    message.error({
+      content: '退出登录失败',
+      duration: 3,
+      closable: true,
+      onClick: () => {
+        message.destroy()
+      },
+    })
   }
 }
 

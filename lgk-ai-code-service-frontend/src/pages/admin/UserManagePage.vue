@@ -26,10 +26,10 @@
     </div>
 
     <!-- 表格 -->
-    <a-table 
-      :columns="columns" 
-      :data-source="data" 
-      :pagination="pagination" 
+    <a-table
+      :columns="columns"
+      :data-source="data"
+      :pagination="pagination"
       @change="doTableChange"
       :loading="loading"
       row-key="id"
@@ -211,10 +211,24 @@ const fetchData = async () => {
       data.value = res.data.data.records ?? []
       total.value = res.data.data.totalRow ?? 0
     } else {
-      message.error('获取数据失败，' + res.data.message)
+      message.error({
+        content: '获取数据失败，' + res.data.message,
+        duration: 3,
+        closable: true,
+        onClick: () => {
+          message.destroy()
+        },
+      })
     }
   } catch {
-    message.error('获取数据失败')
+    message.error({
+      content: '获取数据失败',
+      duration: 3,
+      closable: true,
+      onClick: () => {
+        message.destroy()
+      },
+    })
   } finally {
     loading.value = false
   }
@@ -266,7 +280,7 @@ const showEditModal = async (record: API.UserVO) => {
   isEdit.value = true
   modalVisible.value = true
   resetForm()
-  
+
   try {
     const res = await getUserVoById({ id: record.id! })
     if (res.data.code === 0 && res.data.data) {
@@ -279,7 +293,14 @@ const showEditModal = async (record: API.UserVO) => {
       })
     }
   } catch {
-    message.error('获取用户信息失败')
+    message.error({
+      content: '获取用户信息失败',
+      duration: 3,
+      closable: true,
+      onClick: () => {
+        message.destroy()
+      },
+    })
   }
 }
 
@@ -301,24 +322,52 @@ const handleModalOk = async () => {
   try {
     await formRef.value?.validate()
     modalLoading.value = true
-    
+
     if (isEdit.value) {
       const res = await updateUser(formData)
       if (res.data.code === 0) {
-        message.success('更新成功')
+        message.success({
+          content: '更新成功',
+          duration: 3,
+          closable: true,
+          onClick: () => {
+            message.destroy()
+          },
+        })
         modalVisible.value = false
         fetchData()
       } else {
-        message.error('更新失败：' + res.data.message)
+        message.error({
+          content: '更新失败：' + res.data.message,
+          duration: 3,
+          closable: true,
+          onClick: () => {
+            message.destroy()
+          },
+        })
       }
     } else {
       const res = await addUser(formData)
       if (res.data.code === 0) {
-        message.success('添加成功')
+        message.success({
+          content: '添加成功',
+          duration: 3,
+          closable: true,
+          onClick: () => {
+            message.destroy()
+          },
+        })
         modalVisible.value = false
         fetchData()
       } else {
-        message.error('添加失败：' + res.data.message)
+        message.error({
+          content: '添加失败：' + res.data.message,
+          duration: 3,
+          closable: true,
+          onClick: () => {
+            message.destroy()
+          },
+        })
       }
     }
   } catch (err) {
@@ -342,13 +391,34 @@ const doDelete = async (id: number) => {
   try {
     const res = await deleteUser({ id })
     if (res.data.code === 0) {
-      message.success('删除成功')
+      message.success({
+        content: '删除成功',
+        duration: 3,
+        closable: true,
+        onClick: () => {
+          message.destroy()
+        },
+      })
       fetchData()
     } else {
-      message.error('删除失败：' + res.data.message)
+      message.error({
+        content: '删除失败：' + res.data.message,
+        duration: 3,
+        closable: true,
+        onClick: () => {
+          message.destroy()
+        },
+      })
     }
   } catch {
-    message.error('删除失败')
+    message.error({
+      content: '删除失败',
+      duration: 3,
+      closable: true,
+      onClick: () => {
+        message.destroy()
+      },
+    })
   }
 }
 
