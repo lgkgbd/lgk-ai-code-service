@@ -220,9 +220,15 @@ const viewAppChat = (appId: string | number) => {
 }
 
 // 查看应用作品
-const viewAppWork = (deployKey: string) => {
-  const deployUrl = `http://localhost/${deployKey}`
-  window.open(deployUrl, '_blank')
+const viewAppWork = (app: any) => {
+  // 如果有部署链接，直接打开
+  if (app.deployKey) {
+    const deployUrl = `http://localhost/${app.deployKey}`
+    window.open(deployUrl, '_blank')
+  } else {
+    // 如果没有部署链接，跳转到聊天页面查看作品
+    router.push(`/app/chat/${app.id}?view=1&showWork=1`)
+  }
 }
 
 // 格式化时间
@@ -439,9 +445,8 @@ onMounted(() => {
                   查看对话
                 </a-button>
                 <a-button
-                  v-if="app.deployKey"
                   size="small"
-                  @click.stop="viewAppWork(app.deployKey!)"
+                  @click.stop="viewAppWork(app)"
                 >
                   查看作品
                 </a-button>

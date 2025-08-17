@@ -51,6 +51,7 @@ const saving = ref(false)
 // 权限控制
 const canEdit = ref(false)
 const isViewMode = ref(false)
+const showWorkMode = ref(false)
 
 // 应用详情弹窗
 const showAppDetailModal = ref(false)
@@ -441,6 +442,7 @@ onMounted(() => {
 
   // 检查是否是查看模式
   isViewMode.value = route.query.view === '1'
+  showWorkMode.value = route.query.showWork === '1'
 
   loadAppInfo()
 })
@@ -585,16 +587,24 @@ onUnmounted(() => {
       <!-- 右侧网页展示区域 -->
       <div class="preview-section">
         <div class="preview-header">
-          <span>生成后的网页展示</span>
+          <span v-if="showWorkMode">作品展示</span>
+          <span v-else>生成后的网页展示</span>
         </div>
 
         <div class="preview-content">
-          <div v-if="!showWebsite" class="preview-placeholder">
+          <div v-if="!showWebsite && !showWorkMode" class="preview-placeholder">
             <code-outlined />
             <p>等待代码生成完成...</p>
           </div>
+          <div v-else-if="showWorkMode && appInfo?.codeGenType && appInfo?.id" class="work-preview">
+            <iframe
+              :src="`http://localhost:8123/api/static/${appInfo.codeGenType}_${appInfo.id}/`"
+              class="website-preview"
+              frameborder="0"
+            ></iframe>
+          </div>
           <iframe
-            v-else
+            v-else-if="showWebsite"
             :src="websiteUrl"
             class="website-preview"
             frameborder="0"
@@ -848,6 +858,17 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   border: none;
+}
+
+.work-preview {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.work-preview .website-preview {
+  border: 2px solid #e8e8e8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 /* 可拖拽分割线样式 */
