@@ -9,6 +9,7 @@ import {
 } from '@/api/appController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { getCodeGenTypeConfig } from '@/constants/codeGenType'
+import homeLogo from '@/assets/homeLogo.png'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
@@ -228,7 +229,7 @@ onMounted(() => {
       <div class="hero-section">
         <h1 class="main-title">
           一句话 呈所想
-          <span class="title-icon">🐱</span>
+          <img class="title-icon" :src="homeLogo" alt="logo" />
         </h1>
         <p class="sub-title">与 AI 对话轻松创建应用和网站</p>
       </div>
@@ -237,23 +238,22 @@ onMounted(() => {
       <div class="input-section">
         <div class="input-container">
           <div class="input-wrapper">
-            <a-input
+            <a-textarea
               v-model:value="userPrompt"
-              placeholder="帮我创建个人博客网站"
-              size="large"
+              placeholder="请描述你想生成的网站，越详细效果越好哦~"
               :disabled="isCreating"
-              @press-enter="handleCreateApp"
+              :auto-size="{ minRows: 3, maxRows: 6 }"
             />
+            <a-button
+              type="primary"
+              size="large"
+              :loading="isCreating"
+              @click="handleCreateApp"
+              class="submit-btn"
+            >
+              <span class="submit-icon">↑</span>
+            </a-button>
           </div>
-          <a-button
-            type="primary"
-            size="large"
-            :loading="isCreating"
-            @click="handleCreateApp"
-            class="submit-btn"
-          >
-            <span class="submit-icon">↑</span>
-          </a-button>
         </div>
       </div>
 
@@ -475,7 +475,8 @@ onMounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  background: linear-gradient(180deg, #ffffff 0%, #e6f3ff 30%, #4a90e2 100%);
+  background: radial-gradient(1200px 600px at 50% 0%, rgba(74, 144, 226, 0.18), transparent 60%),
+              linear-gradient(180deg, #ffffff 0%, #eaf4ff 30%, #e6f3ff 100%);
 }
 
 .tech-pattern {
@@ -505,15 +506,16 @@ onMounted(() => {
 /* 标题区域 */
 .hero-section {
   text-align: center;
-  margin-bottom: 60px;
-  padding: 60px 0;
+  margin-bottom: 48px;
+  padding: 48px 0 32px;
 }
 
 .main-title {
-  font-size: 3.5rem;
-  font-weight: 700;
+  font-size: 4rem;
+  font-weight: 800;
   color: #1a1a1a;
   margin: 0 0 20px 0;
+  letter-spacing: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -521,14 +523,17 @@ onMounted(() => {
 }
 
 .title-icon {
-  font-size: 2rem;
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
 }
 
 .sub-title {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   color: #1a1a1a;
   margin: 0;
-  font-weight: 400;
+  font-weight: 500;
+  opacity: 0.85;
 }
 
 /* 输入区域 */
@@ -538,10 +543,10 @@ onMounted(() => {
 
 .input-container {
   display: flex;
-  max-width: 600px;
+  max-width: 960px;
   margin: 0 auto;
-  gap: 12px;
-  align-items: flex-end;
+  gap: 16px;
+  align-items: center;
 }
 
 .input-wrapper {
@@ -549,28 +554,36 @@ onMounted(() => {
   position: relative;
 }
 
-.input-container .ant-input {
+.input-container .ant-input,
+.input-container .ant-input-textarea {
   background: rgba(255, 255, 255, 0.9);
   border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  padding: 16px 20px;
+  border-radius: 24px;
+  font-size: 18px;
+  padding: 26px 28px;
+  line-height: 1.7;
+  padding-right: 92px; /* 为内置按钮预留空间 */
   backdrop-filter: blur(10px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
 }
 
-.input-container .ant-input:focus {
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.15);
+.input-container .ant-input:focus,
+.input-container .ant-input-textarea:focus-within {
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
 }
 
-.input-container .ant-input::placeholder {
-  color: rgba(0, 0, 0, 0.6);
+.input-container .ant-input::placeholder,
+.input-container .ant-input-textarea textarea::placeholder {
+  color: rgba(0, 0, 0, 0.55);
 }
 
 .submit-btn {
-  width: 48px;
-  height: 48px;
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -578,18 +591,18 @@ onMounted(() => {
   padding: 0;
   background: #4a90e2;
   border: none;
-  box-shadow: 0 4px 15px rgba(74, 144, 226, 0.4);
+  box-shadow: 0 10px 24px rgba(74, 144, 226, 0.45);
   transition: all 0.3s ease;
 }
 
 .submit-btn:hover {
   background: #357abd;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(74, 144, 226, 0.5);
+  box-shadow: 0 14px 28px rgba(74, 144, 226, 0.55);
 }
 
 .submit-icon {
-  font-size: 18px;
+  font-size: 20px;
   color: white;
 }
 
@@ -610,8 +623,8 @@ onMounted(() => {
 .prompt-card {
   background: rgba(255, 255, 255, 0.9);
   border: none;
-  border-radius: 12px;
-  padding: 12px 20px;
+  border-radius: 999px;
+  padding: 10px 18px;
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
@@ -791,6 +804,16 @@ onMounted(() => {
 
   .input-container {
     flex-direction: column;
+    max-width: 100%;
+    gap: 12px;
+  }
+
+  .input-wrapper .submit-btn {
+    position: static;
+    align-self: flex-end;
+    width: 48px;
+    height: 48px;
+    margin-top: 8px;
   }
 
   .prompts-grid {
