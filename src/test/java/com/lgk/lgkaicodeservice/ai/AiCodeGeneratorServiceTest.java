@@ -16,6 +16,7 @@ class AiCodeGeneratorServiceTest {
     @Test
     void generateHtmlCode() {
         HtmlCodeResult result = aiCodeGeneratorService.generateHtmlCode("做个程序员的工作记录小工具，不超过20行代码");
+        result = aiCodeGeneratorService.generateHtmlCode("做个登录页面，不超过20行代码");
         Assertions.assertNotNull(result);
     }
 

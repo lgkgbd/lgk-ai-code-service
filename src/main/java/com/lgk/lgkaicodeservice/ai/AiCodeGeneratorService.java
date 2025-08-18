@@ -2,7 +2,9 @@ package com.lgk.lgkaicodeservice.ai;
 
 import com.lgk.lgkaicodeservice.ai.model.entity.HtmlCodeResult;
 import com.lgk.lgkaicodeservice.ai.model.entity.MultiFileCodeResult;
+import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.service.UserMessage;
 import reactor.core.publisher.Flux;
 
 public interface AiCodeGeneratorService {
@@ -15,6 +17,7 @@ public interface AiCodeGeneratorService {
      */
     @SystemMessage(fromResource = "prompt/codegen-html-system-prompt.txt")
     HtmlCodeResult generateHtmlCode(String userMessage);
+
 
     /**
      * 生成多文件代码
