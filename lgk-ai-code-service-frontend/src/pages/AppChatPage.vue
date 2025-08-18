@@ -9,6 +9,7 @@ import {
   deleteApp
 } from '@/api/appController'
 import { useLoginUserStore } from '@/stores/loginUser'
+import { listAppChatHistory } from '@/api/chatHistoryController'
 
 const route = useRoute()
 const router = useRouter()
@@ -50,19 +51,24 @@ const saving = ref(false)
 
 // 权限控制
 const canEdit = ref(false)
-const isViewMode = ref(false)
 const showWorkMode = ref(false)
 
 // 应用详情弹窗
 const showAppDetailModal = ref(false)
 
 // 对话相关
-const messages = ref<Array<{
+type ChatMessage = {
   id: string
   type: 'user' | 'ai'
   content: string
   timestamp: Date
-}>>([])
+  createTimeStr?: string
+}
+const messages = ref<ChatMessage[]>([])
+const historyPageSize = 10
+const historyLoading = ref(false)
+const hasMoreHistory = ref(false)
+const lastCursorCreateTime = ref<string | undefined>(undefined)
 
 const userInput = ref('')
 const isGenerating = ref(false)
@@ -132,17 +138,6 @@ const loadAppInfo = async () => {
 
       // 检查权限
       checkPermissions()
-
-      // 如果不是查看模式且有初始提示词，自动发送第一条消息
-      if (!isViewMode.value && res.data.data.initPrompt && messages.value.length === 0) {
-        messages.value.push({
-          id: Date.now().toString(),
-          type: 'user',
-          content: res.data.data.initPrompt,
-          timestamp: new Date()
-        })
-        generateCode(res.data.data.initPrompt)
-      }
     } else {
       message.error('获取应用信息失败')
       router.push('/')
@@ -163,16 +158,16 @@ const showAppDetail = () => {
 
 // 删除应用
 const handleDeleteApp = async () => {
-  if (!appInfo.value?.id) return
+  if (!appInfo.value || !appInfo.value.id) return
 
   Modal.confirm({
     title: '确认删除',
-    content: `确定要删除应用"${appInfo.value.appName}"吗？此操作不可恢复。`,
+    content: `确定要删除应用"${appInfo.value?.appName || ''}"吗？此操作不可恢复。`,
     okText: '确定',
     cancelText: '取消',
     onOk: async () => {
       try {
-        const res = await deleteApp({ id: appInfo.value.id })
+        const res = await deleteApp({ id: appInfo.value!.id })
         if (res.data.code === 0) {
           message.success('删除成功')
           router.push('/')
@@ -188,22 +183,23 @@ const handleDeleteApp = async () => {
 }
 
 // SSE流式对话
-const generateCode = async (message: string) => {
-  if (!message.trim()) return
+const generateCode = async (promptMessage: string) => {
+  if (!promptMessage.trim()) return
 
   isGenerating.value = true
 
-  // 添加AI消息到数组末尾
-  const aiMessageIndex = messages.value.length
-  messages.value.push({
-    id: Date.now().toString(),
+  // 添加AI消息到数组末尾（使用对象引用，避免索引错位）
+  const aiMessageId = Date.now().toString()
+  const aiMsg: ChatMessage = {
+    id: aiMessageId,
     type: 'ai',
     content: '',
-    timestamp: new Date()
-  })
+    timestamp: new Date(),
+  }
+  messages.value.push(aiMsg)
 
-  console.log('开始生成代码，AI消息索引:', aiMessageIndex) // 调试信息
-  console.log('当前消息列表:', messages.value) // 调试信息
+  console.log('开始生成代码，AI消息ID:', aiMessageId)
+  console.log('当前消息列表:', messages.value)
 
   let streamCompleted = false
   let fullContent = ''
@@ -212,7 +208,7 @@ const generateCode = async (message: string) => {
     // 构建URL参数
     const params = new URLSearchParams({
       appId: appId.value || '',
-      message: message,
+      message: promptMessage,
     })
 
     const url = `http://localhost:8123/api/app/chat/gen/code?${params}`
@@ -267,11 +263,8 @@ const generateCode = async (message: string) => {
 
             if (data.d) {
               fullContent += data.d
-              // 更新对应索引的消息内容
-              if (messages.value[aiMessageIndex]) {
-                messages.value[aiMessageIndex].content = fullContent
-                console.log('AI回复更新:', fullContent) // 调试信息
-              }
+              aiMsg.content = fullContent
+              console.log('AI回复更新:', fullContent)
               scrollToBottom()
             }
           } catch (error) {
@@ -294,7 +287,7 @@ const generateCode = async (message: string) => {
             message.success('代码生成完成')
           } else {
             console.log('代码生成失败，无内容')
-            handleError(new Error('生成失败，无内容'), aiMessageIndex)
+            handleError(new Error('生成失败，无内容'), aiMsg)
           }
           return
         }
@@ -315,29 +308,101 @@ const generateCode = async (message: string) => {
 
   } catch (error) {
     console.error('生成代码失败:', error)
-    handleError(error, aiMessageIndex)
+    handleError(error, aiMsg)
   }
 }
 
 // 错误处理函数
-const handleError = (error: unknown, aiMessageIndex: number) => {
+const handleError = (error: unknown, aiMsg?: ChatMessage) => {
   console.error('生成代码失败：', error)
 
   // 只有在真正出错时才显示错误消息
-  if (messages.value[aiMessageIndex] && !messages.value[aiMessageIndex].content) {
-    messages.value[aiMessageIndex].content = '抱歉，生成过程中出现了错误，请重试。'
+  if (aiMsg && !aiMsg.content) {
+    aiMsg.content = '抱歉，生成过程中出现了错误，请重试。'
   }
 
   message.error('生成失败，请重试')
   isGenerating.value = false
 }
 
-// 更新预览
+// 更新预览，增加时间戳避免缓存
+const previewVersion = ref(0)
 const updatePreview = () => {
   if (appInfo.value?.codeGenType && appInfo.value?.id) {
-    websiteUrl.value = `http://localhost:8123/api/static/${appInfo.value.codeGenType}_${appInfo.value.id}/`
+    previewVersion.value = Date.now()
+    websiteUrl.value = `http://localhost:8123/api/static/${appInfo.value.codeGenType}_${appInfo.value.id}/?v=${previewVersion.value}`
     showWebsite.value = true
     console.log('预览已更新:', websiteUrl.value) // 调试信息
+  }
+}
+
+// 加载对话历史（游标分页）
+const loadChatHistory = async (isInitial: boolean = false) => {
+  if (!appId.value) return
+  if (historyLoading.value) return
+  historyLoading.value = true
+  try {
+    const res = await listAppChatHistory({
+      appId: appId.value,
+      pageSize: historyPageSize,
+      lastCreateTime: isInitial ? undefined : lastCursorCreateTime.value,
+    })
+    if (res.data.code === 0 && res.data.data) {
+      const records = res.data.data.records || []
+      // 将后端记录映射到前端消息结构
+      const mapped = records.map((r: any) => ({
+        id: String(r.id ?? `${r.createTime}`),
+        type: (String(r.messageType || '').toLowerCase() === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+        content: String(r.message || ''),
+        timestamp: r.createTime ? new Date(r.createTime) : new Date(),
+        createTimeStr: r.createTime ? String(r.createTime) : undefined,
+      })) as Array<{ id: string; type: 'user' | 'ai'; content: string; timestamp: Date; createTimeStr?: string }>
+      if (isInitial) {
+        messages.value = mapped
+      } else {
+        // 加载更多：合并后统一按时间升序排序
+        messages.value = [...mapped, ...messages.value]
+      }
+      // 升序展示
+      messages.value.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+
+      // 维护游标（取当前已加载中最早一条的时间）
+      if (messages.value.length > 0) {
+        const earliest = messages.value[0]
+        lastCursorCreateTime.value = earliest.createTimeStr || earliest.timestamp.toISOString()
+      }
+      hasMoreHistory.value = (records.length === historyPageSize)
+
+      // 进入页面：如果已有至少 2 条对话记录，展示网站
+      if (isInitial && messages.value.length >= 2) {
+        updatePreview()
+      }
+    } else {
+      message.error('加载对话历史失败')
+    }
+  } catch (error) {
+    console.error('加载对话历史失败:', error)
+    message.error('加载对话历史失败')
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+// 自动首条消息：仅当自己的应用且无历史时，发送 initPrompt
+const tryAutoSendInitPrompt = async () => {
+  if (!appInfo.value) return
+  const isOwner = appInfo.value.userId === loginUserStore.loginUser?.id
+  if (isOwner && (messages.value.length === 0) && appInfo.value.initPrompt) {
+    const initMsg = appInfo.value.initPrompt
+    messages.value.push({
+      id: Date.now().toString(),
+      type: 'user',
+      content: initMsg,
+      timestamp: new Date(),
+    })
+    await nextTick()
+    scrollToBottom()
+    generateCode(initMsg)
   }
 }
 
@@ -377,7 +442,7 @@ const handleDeploy = async () => {
         content: `您的应用已成功部署，访问地址：${res.data.data}`,
         onOk: () => {
           // 可以复制链接到剪贴板
-          navigator.clipboard.writeText(res.data.data)
+          navigator.clipboard.writeText(String(res.data.data))
           message.success('链接已复制到剪贴板')
         }
       })
@@ -432,7 +497,7 @@ const formatTime = (time: string | Date) => {
   return date.toLocaleString('zh-CN')
 }
 
-onMounted(() => {
+onMounted(async () => {
   appId.value = route.params.id as string
   if (!appId.value) {
     message.error('应用ID无效')
@@ -440,11 +505,10 @@ onMounted(() => {
     return
   }
 
-  // 检查是否是查看模式
-  isViewMode.value = route.query.view === '1'
   showWorkMode.value = route.query.showWork === '1'
-
-  loadAppInfo()
+  await loadAppInfo()
+  await loadChatHistory(true)
+  await tryAutoSendInitPrompt()
 })
 
 onUnmounted(() => {
@@ -515,6 +579,9 @@ onUnmounted(() => {
         </div>
 
         <div class="messages-container">
+          <div v-if="hasMoreHistory" class="load-more-bar">
+            <a-button size="small" :loading="historyLoading" @click="loadChatHistory(false)">加载更多</a-button>
+          </div>
           <div
             v-for="msg in messages"
             :key="msg.id"
@@ -731,6 +798,12 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.load-more-bar {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
 }
 
 .message {

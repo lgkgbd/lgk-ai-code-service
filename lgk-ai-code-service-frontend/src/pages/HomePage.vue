@@ -74,26 +74,12 @@ const quickPrompts = reactive([
 // 创建应用
 const handleCreateApp = async () => {
   if (!userPrompt.value.trim()) {
-    message.warning({
-      content: '请输入应用描述',
-      duration: 3,
-      closable: true,
-      onClick: () => {
-        message.destroy()
-      },
-    })
+    message.warning('请输入应用描述')
     return
   }
 
   if (!loginUserStore.loginUser || loginUserStore.loginUser.userName === '未登录') {
-    message.warning({
-      content: '请先登录',
-      duration: 3,
-      closable: true,
-      onClick: () => {
-        message.destroy()
-      },
-    })
+    message.warning('请先登录')
     router.push('/user/login')
     return
   }
@@ -102,35 +88,14 @@ const handleCreateApp = async () => {
   try {
     const res = await addApp({ initPrompt: userPrompt.value })
     if (res.data.code === 0 && res.data.data) {
-      message.success({
-        content: '应用创建成功',
-        duration: 3,
-        closable: true,
-        onClick: () => {
-          message.destroy()
-        },
-      })
+      message.success('应用创建成功')
       // 跳转到对话页面，传递应用ID
       router.push(`/app/chat/${res.data.data}`)
     } else {
-      message.error({
-        content: res.data.message || '创建失败',
-        duration: 3,
-        closable: true,
-        onClick: () => {
-          message.destroy()
-        },
-      })
+      message.error(res.data.message || '创建失败')
     }
   } catch (error) {
-    message.error({
-      content: '创建失败',
-      duration: 3,
-      closable: true,
-      onClick: () => {
-        message.destroy()
-      },
-    })
+    message.error('创建失败')
     console.error(error)
   } finally {
     isCreating.value = false
@@ -206,29 +171,19 @@ const handleFeaturedAppsSearch = (value: string) => {
 }
 
 // 查看应用对话
-const viewAppChat = (appId: string | number) => {
-  // 检查是否是自己的作品
-  const isOwnApp = myApps.data.some(app => app.id === appId)
-  const isFeaturedApp = featuredApps.data.some(app => app.id === appId)
-
-  // 如果不是自己的作品，添加view参数
-  if (!isOwnApp && isFeaturedApp) {
-    router.push(`/app/chat/${appId}?view=1`)
-  } else {
-    router.push(`/app/chat/${appId}`)
-  }
+const viewAppChat = (appId: string) => {
+  router.push(`/app/chat/${appId}`)
 }
 
 // 查看应用作品
 const viewAppWork = (app: any) => {
-  // 如果有部署链接，直接打开
-  if (app.deployKey) {
+  if (app?.deployKey) {
     const deployUrl = `http://localhost/${app.deployKey}`
     window.open(deployUrl, '_blank')
-  } else {
-    // 如果没有部署链接，跳转到聊天页面查看作品
-    router.push(`/app/chat/${app.id}?view=1&showWork=1`)
+    return
   }
+  if (!app?.id) return
+  router.push(`/app/chat/${app.id}?showWork=1`)
 }
 
 // 格式化时间
@@ -357,7 +312,7 @@ onMounted(() => {
                 <a-button
                   v-if="app.deployKey"
                   size="small"
-                  @click.stop="viewAppWork(app.deployKey!)"
+                  @click.stop="viewAppWork(app)"
                 >
                   查看作品
                 </a-button>
