@@ -65,6 +65,13 @@ type ChatMessage = {
   createTimeStr?: string
 }
 const messages = ref<ChatMessage[]>([])
+// 流内排序保护：记录当前流式生成时AI消息的锚点位置
+type StreamOrderGuard = {
+  active: boolean
+  anchorId?: string
+  anchorIndex?: number
+}
+const streamOrderGuard = ref<StreamOrderGuard>({ active: false })
 const historyPageSize = 10
 const historyLoading = ref(false)
 const hasMoreHistory = ref(false)
@@ -198,6 +205,13 @@ const generateCode = async (promptMessage: string) => {
   }
   messages.value.push(aiMsg)
 
+  // 记录锚点（AI消息插入时的索引），并开启保护
+  streamOrderGuard.value = {
+    active: true,
+    anchorId: aiMessageId,
+    anchorIndex: messages.value.length - 1,
+  }
+
   console.log('开始生成代码，AI消息ID:', aiMessageId)
   console.log('当前消息列表:', messages.value)
 
@@ -289,6 +303,8 @@ const generateCode = async (promptMessage: string) => {
             console.log('代码生成失败，无内容')
             handleError(new Error('生成失败，无内容'), aiMsg)
           }
+          // 关闭排序保护
+          streamOrderGuard.value.active = false
           return
         }
       }
@@ -305,6 +321,9 @@ const generateCode = async (promptMessage: string) => {
     }, 1000)
 
     message.success('代码生成完成')
+
+    // 关闭排序保护
+    streamOrderGuard.value.active = false
 
   } catch (error) {
     console.error('生成代码失败:', error)
@@ -323,6 +342,7 @@ const handleError = (error: unknown, aiMsg?: ChatMessage) => {
 
   message.error('生成失败，请重试')
   isGenerating.value = false
+  streamOrderGuard.value.active = false
 }
 
 // 更新预览，增加时间戳避免缓存
@@ -358,13 +378,17 @@ const loadChatHistory = async (isInitial: boolean = false) => {
         createTimeStr: r.createTime ? String(r.createTime) : undefined,
       })) as Array<{ id: string; type: 'user' | 'ai'; content: string; timestamp: Date; createTimeStr?: string }>
       if (isInitial) {
-        messages.value = mapped
+        // 首次加载：整体按时间升序
+        messages.value = mapped.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
       } else {
-        // 加载更多：合并后统一按时间升序排序
-        messages.value = [...mapped, ...messages.value]
+        // 加载更多：仅将更早的记录按升序插到队列最前，避免替换数组，保持流式消息对象引用不变
+        const ascending = [...mapped].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+        messages.value.unshift(...ascending)
+        // 若未处于流内保护，则再做一次整体升序兜底
+        if (!streamOrderGuard.value.active) {
+          messages.value.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+        }
       }
-      // 升序展示
-      messages.value.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
 
       // 维护游标（取当前已加载中最早一条的时间）
       if (messages.value.length > 0) {
@@ -593,7 +617,11 @@ onUnmounted(() => {
             </div>
 
             <div class="message-content">
-              <div class="message-text" v-html="renderMarkdown(msg.content)"></div>
+              <div class="message-text" v-if="msg.content" v-html="renderMarkdown(msg.content)"></div>
+              <div class="message-text" v-else>
+                <a-spin size="small" />
+                正在生成代码...
+              </div>
               <div class="message-time">{{ formatTime(msg.timestamp) }}</div>
             </div>
 
@@ -605,17 +633,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div v-if="isGenerating" class="message ai-message">
-            <div class="message-avatar">
-              <img src="/src/assets/aiAvatar.png" alt="AI" class="avatar-image" />
-            </div>
-            <div class="message-content">
-              <div class="message-text">
-                <a-spin size="small" />
-                正在生成代码...
-              </div>
-            </div>
-          </div>
+
         </div>
 
         <div class="input-section">
