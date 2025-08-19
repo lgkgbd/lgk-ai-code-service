@@ -7,6 +7,7 @@ import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.lgk.lgkaicodeservice.ai.model.enums.CodeGenTypeEnum;
 import com.lgk.lgkaicodeservice.code.AiCodeGeneratorFacade;
+import com.lgk.lgkaicodeservice.code.handler.StreamHandlerExecutor;
 import com.lgk.lgkaicodeservice.constant.AppConstant;
 import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
@@ -56,6 +57,8 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
     @Resource
     private ChatHistoryService chatHistoryService;
 
+    @Resource
+    private StreamHandlerExecutor streamHandlerExecutor;
 
     @Override
     public AppVO getAppVO(App app) {
@@ -129,11 +132,13 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         ThrowUtils.throwIf(StrUtil.isBlank(message), ErrorCode.PARAMS_ERROR, "用户消息不能为空");
         // 2. 查询应用信息
         App app = this.getById(appId);
+
         ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
         // 3. 验证用户是否有权限访问该应用，仅本人可以生成代码
         if (!app.getUserId().equals(loginUser.getId())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "无权限访问该应用");
         }
+
         // 4. 获取应用的代码生成类型
         String codeGenTypeStr = app.getCodeGenType();
         CodeGenTypeEnum codeGenTypeEnum = CodeGenTypeEnum.getEnumByValue(codeGenTypeStr);
@@ -143,27 +148,10 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         // 5. 通过校验后，添加用户消息到对话历史
         chatHistoryService.addChatMessage(appId, message, ChatHistoryMessageTypeEnum.USER.getValue(), loginUser.getId());
         // 6. 调用 AI 生成代码（流式）
-        Flux<String> contentFlux = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
-        // 7. 收集AI响应内容并在完成后记录到对话历史
-        StringBuilder aiResponseBuilder = new StringBuilder();
-        return contentFlux
-                .map(chunk -> {
-                    // 收集AI响应内容
-                    aiResponseBuilder.append(chunk);
-                    return chunk;
-                })
-                .doOnComplete(() -> {
-                    // 流式响应完成后，添加AI消息到对话历史
-                    String aiResponse = aiResponseBuilder.toString();
-                    if (StrUtil.isNotBlank(aiResponse)) {
-                        chatHistoryService.addChatMessage(appId, aiResponse, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-                    }
-                })
-                .doOnError(error -> {
-                    // 如果AI回复失败，也要记录错误消息
-                    String errorMessage = "AI回复失败: " + error.getMessage();
-                    chatHistoryService.addChatMessage(appId, errorMessage, ChatHistoryMessageTypeEnum.AI.getValue(), loginUser.getId());
-                });
+        Flux<String> codeStream = aiCodeGeneratorFacade.generateAndSaveCodeStream(message, codeGenTypeEnum, appId);
+        // 7. 收集 AI 响应内容并在完成后记录到对话历史
+        return streamHandlerExecutor.doExecute(codeStream, chatHistoryService, appId, loginUser, codeGenTypeEnum);
+
     }
 
 
