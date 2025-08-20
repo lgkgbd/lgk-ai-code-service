@@ -3,7 +3,8 @@
  */
 export enum CodeGenTypeEnum {
   HTML = 'html',
-  MULTI_FILE = 'multi_file'
+  MULTI_FILE = 'multi_file',
+  VUE_PROJECT = 'vue_project'
 }
 
 /**
@@ -21,6 +22,12 @@ export const CODE_GEN_TYPE_CONFIG = {
     value: CodeGenTypeEnum.MULTI_FILE,
     color: '#52c41a',
     icon: 'file-outlined'
+  },
+  [CodeGenTypeEnum.VUE_PROJECT]: {
+    label: 'Vue 工程模式',
+    value: CodeGenTypeEnum.VUE_PROJECT,
+    color: '#42b883',
+    icon: 'code-outlined'
   }
 } as const
 

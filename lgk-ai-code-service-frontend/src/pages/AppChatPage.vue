@@ -13,6 +13,7 @@ import { listAppChatHistory } from '@/api/chatHistoryController'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
+import { getStaticPreviewUrl } from '../constants/urls'
 
 const route = useRoute()
 const router = useRouter()
@@ -380,12 +381,10 @@ const handleError = (error: unknown, aiMsg?: ChatMessage) => {
   streamOrderGuard.value.active = false
 }
 
-// 更新预览，增加时间戳避免缓存
-const previewVersion = ref(0)
+// 更新预览
 const updatePreview = () => {
   if (appInfo.value?.codeGenType && appInfo.value?.id) {
-    previewVersion.value = Date.now()
-    websiteUrl.value = `http://localhost:8123/api/static/${appInfo.value.codeGenType}_${appInfo.value.id}/?v=${previewVersion.value}`
+    websiteUrl.value = getStaticPreviewUrl(String(appInfo.value.codeGenType), String(appInfo.value.id))
     showWebsite.value = true
     console.log('预览已更新:', websiteUrl.value) // 调试信息
   }
@@ -724,7 +723,7 @@ onUnmounted(() => {
           </div>
           <div v-else-if="showWorkMode && appInfo?.codeGenType && appInfo?.id" class="work-preview">
             <iframe
-              :src="`http://localhost:8123/api/static/${appInfo.codeGenType}_${appInfo.id}/`"
+              :src="getStaticPreviewUrl(String(appInfo.codeGenType), String(appInfo.id))"
               class="website-preview"
               frameborder="0"
             ></iframe>
