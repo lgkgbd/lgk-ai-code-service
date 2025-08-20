@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import {
@@ -10,41 +10,36 @@ import {
 } from '@/api/appController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { listAppChatHistory } from '@/api/chatHistoryController'
+import MarkdownIt from 'markdown-it'
+import hljs from 'highlight.js'
+import 'highlight.js/styles/github.css'
 
 const route = useRoute()
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
 
-// 简单的Markdown渲染函数
-const renderMarkdown = (text: string) => {
-  if (!text) return ''
-
-  let html = text
-
-  // 处理代码块 ```language
-  html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-    const language = lang || 'text'
-    return `<pre class="code-block"><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>`
-  })
-
-  // 处理行内代码 `code`
-  html = html.replace(/`([^`]+)`/g, '<code class="inline-code">$1</code>')
-
-  // 处理换行
-  html = html.replace(/\n/g, '<br>')
-
-  return html
-}
-
-// HTML转义函数
-const escapeHtml = (text: string) => {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
-}
+// Markdown 渲染器（支持代码高亮、自动链接、换行）
+const md = new MarkdownIt({
+  html: false,
+  linkify: true,
+  breaks: true,
+  highlight: function (str: string, lang: string) {
+    if (lang && hljs.getLanguage(lang)) {
+      try {
+        return `<pre class="code-block"><code class="language-${lang}">${hljs.highlight(str, { language: lang }).value}</code></pre>`
+      } catch {}
+    }
+    const escaped = str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+    return `<pre class=\"code-block\"><code>${escaped}</code></pre>`
+  }
+})
+const renderMarkdown = (text: string) => (text ? md.render(text) : '')
 
 // 应用信息
-const appInfo = ref<Record<string, any> | null>(null)
+const appInfo = ref<API.AppVO | null>(null)
 const appId = ref<string>('')
 const loading = ref(false)
 const saving = ref(false)
@@ -197,12 +192,12 @@ const generateCode = async (promptMessage: string) => {
 
   // 添加AI消息到数组末尾（使用对象引用，避免索引错位）
   const aiMessageId = Date.now().toString()
-  const aiMsg: ChatMessage = {
+  const aiMsg = reactive<ChatMessage>({
     id: aiMessageId,
     type: 'ai',
     content: '',
     timestamp: new Date(),
-  }
+  })
   messages.value.push(aiMsg)
 
   // 记录锚点（AI消息插入时的索引），并开启保护
@@ -214,8 +209,6 @@ const generateCode = async (promptMessage: string) => {
 
   console.log('开始生成代码，AI消息ID:', aiMessageId)
   console.log('当前消息列表:', messages.value)
-
-  let streamCompleted = false
   let fullContent = ''
 
   try {
@@ -227,104 +220,146 @@ const generateCode = async (promptMessage: string) => {
 
     const url = `http://localhost:8123/api/app/chat/gen/code?${params}`
 
-    // 使用fetch API替代EventSource，以支持携带认证信息
-    const response = await fetch(url, {
-      method: 'GET',
-      credentials: 'include', // 携带cookies
-      headers: {
-        'Accept': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-      },
-    })
+    // 首选原生 EventSource（支持 withCredentials），避免 fetch 在部分环境的缓冲
+    let endedByES = false
+    const es = new EventSource(url, { withCredentials: true })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+    // rAF 合并提交，降低频繁渲染
+    let pendingDelta = ''
+    let rafId: number | null = null
+    const commitDelta = () => {
+      if (!pendingDelta) return
+      fullContent += pendingDelta
+      pendingDelta = ''
+      aiMsg.content = fullContent
+      nextTick().then(scrollToBottom)
+    }
+    const scheduleCommit = () => {
+      if (rafId !== null) return
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        commitDelta()
+      })
+    }
+    const pushDelta = (delta: string) => {
+      if (!delta) return
+      pendingDelta += delta
+      scheduleCommit()
     }
 
-    const reader = response.body?.getReader()
-    if (!reader) {
-      throw new Error('无法获取响应流')
-    }
-
-    const decoder = new TextDecoder()
-
-    while (true) {
-      const { done, value } = await reader.read()
-
-      if (done) {
-        break
-      }
-
-      const chunk = decoder.decode(value, { stream: true })
-      console.log('收到SSE数据块:', chunk) // 调试信息
-
-      const lines = chunk.split('\n')
-
-      for (const line of lines) {
-        const trimmedLine = line.trim()
-        if (!trimmedLine) continue
-
-        console.log('处理SSE行:', trimmedLine) // 调试信息
-
-        if (trimmedLine.startsWith('data:')) {
-          const dataStr = trimmedLine.slice(5) // 移除 'data:' 前缀
-
-          if (dataStr.trim() === '') continue
-
-          try {
-            const data = JSON.parse(dataStr)
-            console.log('解析的JSON数据:', data) // 调试信息
-
-            if (data.d) {
-              fullContent += data.d
-              aiMsg.content = fullContent
-              console.log('AI回复更新:', fullContent)
-              scrollToBottom()
-            }
-          } catch (error) {
-            console.error('解析SSE数据失败:', error, '原始数据:', dataStr)
-          }
-        } else if (trimmedLine.startsWith('event:done')) {
-          console.log('收到完成事件') // 调试信息
-          streamCompleted = true
-          isGenerating.value = false
-
-          // 检查是否有内容生成
-          if (fullContent.trim()) {
-            console.log('代码生成成功，内容长度:', fullContent.length)
-            // 延迟更新预览，确保后端已完成处理
-            setTimeout(async () => {
-              await loadAppInfo()
-              updatePreview()
-            }, 1000)
-
-            message.success('代码生成完成')
-          } else {
-            console.log('代码生成失败，无内容')
-            handleError(new Error('生成失败，无内容'), aiMsg)
-          }
-          // 关闭排序保护
-          streamOrderGuard.value.active = false
+    es.addEventListener('message', (evt: MessageEvent) => {
+      const text = String(evt.data || '')
+      if (!text) return
+      if (text === '[DONE]') return
+      try {
+        const maybe = JSON.parse(text)
+        if (maybe && typeof maybe === 'object' && 'd' in maybe) {
+          pushDelta(String(maybe.d ?? ''))
           return
         }
+      } catch {}
+      pushDelta(text)
+    })
+
+    es.addEventListener('done', () => {
+      endedByES = true
+      commitDelta()
+      es.close()
+      isGenerating.value = false
+      if (fullContent.trim()) {
+        setTimeout(async () => {
+          await loadAppInfo()
+          updatePreview()
+        }, 1000)
+        message.success('代码生成完成')
+      } else {
+        handleError(new Error('生成失败，无内容'), aiMsg)
       }
+      streamOrderGuard.value.active = false
+    })
+
+    es.onerror = () => {
+      // 若 ES 出错且尚未结束，回退到 fetch 流解析
+      if (endedByES) return
+      es.close()
+      void (async () => {
+        try {
+          const response = await fetch(url, {
+            method: 'GET',
+            credentials: 'include',
+            headers: { 'Accept': 'text/event-stream', 'Cache-Control': 'no-cache' },
+          })
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+          const reader = response.body?.getReader()
+          if (!reader) throw new Error('无法获取响应流')
+          const decoder = new TextDecoder()
+          let buffer = ''
+          let currentEvent = { name: '', dataLines: [] as string[] }
+          const flushEvent = () => {
+            const dataStr = currentEvent.dataLines.join('\n').trim()
+            const eventName = currentEvent.name.trim().toLowerCase()
+            currentEvent = { name: '', dataLines: [] }
+            if (!dataStr) return
+            if (dataStr === '[DONE]' || eventName === 'done') {
+              commitDelta()
+              isGenerating.value = false
+              if (fullContent.trim()) {
+                setTimeout(async () => { await loadAppInfo(); updatePreview() }, 1000)
+                message.success('代码生成完成')
+              } else {
+                handleError(new Error('生成失败，无内容'), aiMsg)
+              }
+              streamOrderGuard.value.active = false
+              return
+            }
+            try {
+              const maybeJson = JSON.parse(dataStr)
+              if (maybeJson && typeof maybeJson === 'object' && 'd' in maybeJson) {
+                pushDelta(String(maybeJson.d ?? ''))
+                return
+              }
+            } catch {}
+            pushDelta(dataStr)
+          }
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            buffer += decoder.decode(value, { stream: true })
+            const lines = buffer.split(/\r?\n/)
+            buffer = lines.pop() || ''
+            for (const rawLine of lines) {
+              const line = rawLine.trimEnd()
+              if (line === '') { flushEvent(); continue }
+              if (line.startsWith('data:')) {
+                const payload = line.slice(5).trimStart()
+                if (payload === '[DONE]') { flushEvent(); continue }
+                try {
+                  const maybeJson = JSON.parse(payload)
+                  if (maybeJson && typeof maybeJson === 'object' && 'd' in maybeJson) {
+                    pushDelta(String(maybeJson.d ?? ''))
+                    continue
+                  }
+                } catch {}
+                if (payload) pushDelta(payload)
+              } else if (line.startsWith('event:')) {
+                currentEvent.name = line.slice(6).trim()
+              }
+            }
+          }
+          if (buffer.length > 0 || currentEvent.dataLines.length > 0) {
+            flushEvent()
+          }
+        } catch (err) {
+          console.error('回退fetch流失败:', err)
+          handleError(err, aiMsg)
+        }
+      })()
     }
 
-    // 如果没有收到done事件，手动结束
-    streamCompleted = true
-    isGenerating.value = false
-
-    // 延迟更新预览，确保后端已完成处理
-    setTimeout(async () => {
-      await loadAppInfo()
-      updatePreview()
-    }, 1000)
-
-    message.success('代码生成完成')
-
-    // 关闭排序保护
-    streamOrderGuard.value.active = false
-
+    // 卸载时关闭连接
+    onUnmounted(() => {
+      try { es.close() } catch {}
+    })
   } catch (error) {
     console.error('生成代码失败:', error)
     handleError(error, aiMsg)
@@ -370,7 +405,13 @@ const loadChatHistory = async (isInitial: boolean = false) => {
     if (res.data.code === 0 && res.data.data) {
       const records = res.data.data.records || []
       // 将后端记录映射到前端消息结构
-      const mapped = records.map((r: any) => ({
+      type ChatRecord = {
+        id?: string | number
+        createTime?: string | number | Date
+        messageType?: string
+        message?: string
+      }
+      const mapped = records.map((r: ChatRecord) => ({
         id: String(r.id ?? `${r.createTime}`),
         type: (String(r.messageType || '').toLowerCase() === 'user' ? 'user' : 'ai') as 'user' | 'ai',
         content: String(r.message || ''),
@@ -515,7 +556,7 @@ const scrollToBottom = () => {
 }
 
 // 格式化时间
-const formatTime = (time: string | Date) => {
+const formatTime = (time: string | Date | undefined) => {
   if (!time) return ''
   const date = new Date(time)
   return date.toLocaleString('zh-CN')
