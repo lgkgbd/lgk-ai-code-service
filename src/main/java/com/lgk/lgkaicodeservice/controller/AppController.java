@@ -129,6 +129,8 @@ public class AppController {
         app.setUserId(loginUser.getId());
         // 应用名称暂时为 initPrompt 前 12 位
         app.setAppName(initPrompt.substring(0, Math.min(initPrompt.length(), 12)));
+        // TODO 暂时设置为 HTML 生成
+        //app.setCodeGenType(CodeGenTypeEnum.HTML.getValue());
         // TODO 暂时设置为多文件生成
         //app.setCodeGenType(CodeGenTypeEnum.MULTI_FILE.getValue());
         // TODO 暂时设置为 VUE 工程生成
