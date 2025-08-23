@@ -1,6 +1,7 @@
 import { CodeGenTypeEnum } from './codeGenType'
 
-export const API_BASE_URL = 'http://localhost:8123/api'
+// 使用相对路径，通过vite代理解决同源问题
+export const API_BASE_URL = '/api'
 export const STATIC_BASE_URL = `${API_BASE_URL}/static`
 
 // 获取静态资源预览URL

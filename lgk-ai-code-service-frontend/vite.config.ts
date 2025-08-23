@@ -19,6 +19,12 @@ export default defineConfig({
         changeOrigin: true,
         secure: false,
       },
+      // 代理静态资源，确保iframe内容与主页面同源
+      '/api/static': {
+        target: 'http://localhost:8123',
+        changeOrigin: true,
+        secure: false,
+      },
     },
   },
 })

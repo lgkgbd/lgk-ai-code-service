@@ -1,12 +1,20 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { message, Modal } from 'ant-design-vue'
+import { message, Modal, Alert } from 'ant-design-vue'
 import {
   Html5Outlined,
   FileOutlined,
   CodeOutlined,
-  QuestionCircleOutlined
+  QuestionCircleOutlined,
+  EditOutlined,
+  ArrowUpOutlined,
+  UserOutlined,
+  InfoCircleOutlined,
+  DownloadOutlined,
+  RocketOutlined,
+  DownOutlined,
+  CheckOutlined
 } from '@ant-design/icons-vue'
 import {
   getAppVoById,
@@ -21,6 +29,8 @@ import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import { getStaticPreviewUrl } from '../constants/urls'
 import { getCodeGenTypeConfig } from '@/constants/codeGenType'
+import { VisualEditor, type ElementInfo } from '@/utils/visualEditor'
+import { DebugHelper } from '@/utils/debugHelper'
 
 const route = useRoute()
 const router = useRouter()
@@ -393,7 +403,23 @@ const updatePreview = () => {
   if (appInfo.value?.codeGenType && appInfo.value?.id) {
     websiteUrl.value = getStaticPreviewUrl(String(appInfo.value.codeGenType), String(appInfo.value.id))
     showWebsite.value = true
-    console.log('预览已更新:', websiteUrl.value) // 调试信息
+    console.log('AppChatPage: preview updated:', websiteUrl.value)
+
+    // 重置编辑器状态
+    if (visualEditor.value) {
+      visualEditor.value.disableEditMode()
+      visualEditor.value = null
+    }
+    isEditMode.value = false
+    selectedElement.value = null
+
+    // 延迟初始化编辑器，确保iframe已加载
+    setTimeout(() => {
+      if (iframeRef.value && !visualEditor.value) {
+        console.log('AppChatPage: attempting to initialize editor after iframe load')
+        initVisualEditor()
+      }
+    }, 2000) // 增加延迟时间，确保iframe完全加载
   }
 }
 
@@ -481,7 +507,13 @@ const tryAutoSendInitPrompt = async () => {
 const sendMessage = async () => {
   if (!userInput.value.trim() || isGenerating.value) return
 
-  const messageContent = userInput.value.trim()
+  let messageContent = userInput.value.trim()
+
+  // 如果有选中的元素，将元素信息添加到提示词中
+  if (selectedElement.value) {
+    messageContent += getSelectedElementPrompt()
+  }
+
   userInput.value = ''
 
   // 添加用户消息
@@ -495,6 +527,15 @@ const sendMessage = async () => {
   // 滚动到底部
   await nextTick()
   scrollToBottom()
+
+  // 清除选中元素并退出编辑模式
+  if (selectedElement.value) {
+    clearSelectedElement()
+    if (visualEditor.value) {
+      visualEditor.value.disableEditMode()
+      isEditMode.value = false
+    }
+  }
 
   // 生成代码
   generateCode(messageContent)
@@ -599,6 +640,80 @@ const formatTime = (time: string | Date | undefined) => {
   return date.toLocaleString('zh-CN')
 }
 
+// 可视化编辑相关
+const visualEditor = ref<VisualEditor | null>(null)
+const isEditMode = ref(false)
+const selectedElement = ref<ElementInfo | null>(null)
+const iframeRef = ref<HTMLIFrameElement | null>(null)
+
+// 初始化可视化编辑器
+const initVisualEditor = () => {
+  if (!iframeRef.value) {
+    console.warn('AppChatPage: iframe ref not found')
+    return
+  }
+
+  console.log('AppChatPage: initializing visual editor')
+
+  visualEditor.value = new VisualEditor({
+    onElementSelected: (elementInfo: ElementInfo) => {
+      console.log('AppChatPage: element selected:', elementInfo)
+      selectedElement.value = elementInfo
+    },
+    onElementHover: () => {
+      // 可以在这里处理悬浮效果
+    }
+  })
+
+  visualEditor.value.init(iframeRef.value)
+
+  // 监听iframe消息
+  window.addEventListener('message', handleIframeMessage)
+
+  console.log('AppChatPage: visual editor initialized')
+}
+
+// 处理iframe消息
+const handleIframeMessage = (event: MessageEvent) => {
+  if (visualEditor.value) {
+    visualEditor.value.handleIframeMessage(event)
+  }
+}
+
+// 切换编辑模式
+const toggleEditMode = () => {
+  if (!visualEditor.value) return
+
+  isEditMode.value = visualEditor.value.toggleEditMode()
+
+  if (!isEditMode.value) {
+    // 退出编辑模式时清除选中元素
+    selectedElement.value = null
+  }
+}
+
+// 清除选中元素
+const clearSelectedElement = () => {
+  selectedElement.value = null
+  if (visualEditor.value) {
+    visualEditor.value.clearSelection()
+  }
+}
+
+// 获取选中元素的提示词
+const getSelectedElementPrompt = () => {
+  if (!selectedElement.value) return ''
+
+  const element = selectedElement.value
+  return `\n\n选中的元素信息：
+- 标签：${element.tagName}
+- 选择器：${element.selector}
+- 文本内容：${element.textContent}
+- 页面路径：${element.pagePath}
+- 位置：(${element.rect.left}, ${element.rect.top})
+- 尺寸：${element.rect.width} x ${element.rect.height}`
+}
+
 onMounted(async () => {
   appId.value = route.params.id as string
   if (!appId.value) {
@@ -615,6 +730,8 @@ onMounted(async () => {
 
 onUnmounted(() => {
   // 清理可能的SSE连接
+  // 清理iframe消息监听
+  window.removeEventListener('message', handleIframeMessage)
 })
 </script>
 
@@ -735,6 +852,18 @@ onUnmounted(() => {
         </div>
 
         <div class="input-section">
+          <!-- 选中元素信息显示 -->
+          <div v-if="selectedElement" class="selected-element-info">
+            <Alert
+              message="已选中元素"
+              :description="`${selectedElement.tagName} - ${selectedElement.textContent || '无文本内容'}`"
+              type="info"
+              show-icon
+              closable
+              @close="clearSelectedElement"
+            />
+          </div>
+
           <a-input
             v-model:value="userInput"
             placeholder="请描述你想生成的网站，越详细效果越好哦"
@@ -745,6 +874,20 @@ onUnmounted(() => {
             无法在别人的作品下对话哦~
           </div>
           <div class="input-actions">
+            <!-- 编辑模式按钮 -->
+            <a-button
+              v-if="showWebsite && canEdit"
+              :type="isEditMode ? 'primary' : 'default'"
+              shape="circle"
+              size="small"
+              :disabled="isGenerating"
+              @click="toggleEditMode"
+              style="margin-right: 8px;"
+              :title="isEditMode ? '退出编辑模式' : '进入编辑模式'"
+            >
+              <EditOutlined />
+            </a-button>
+
             <a-button
               type="primary"
               shape="circle"
@@ -788,9 +931,24 @@ onUnmounted(() => {
           </div>
           <iframe
             v-else-if="showWebsite"
+            ref="iframeRef"
             :src="websiteUrl"
             class="website-preview"
             frameborder="0"
+            @load="() => {
+              console.log('AppChatPage: iframe loaded, initializing editor')
+
+              // 调试iframe同源问题
+              if (iframeRef) {
+                DebugHelper.debugIframe(iframeRef)
+              }
+
+              if (visualEditor) {
+                visualEditor.onIframeLoad()
+              } else {
+                initVisualEditor()
+              }
+            }"
           ></iframe>
         </div>
       </div>
@@ -1004,6 +1162,10 @@ onUnmounted(() => {
   border-top: 1px solid #e8e8e8;
   background: #fafafa;
   flex-shrink: 0;
+}
+
+.selected-element-info {
+  margin-bottom: 12px;
 }
 
 .input-section .ant-input {
