@@ -7,7 +7,7 @@ import com.lgk.lgkaicodeservice.ai.model.enums.CodeGenTypeEnum;
 import com.lgk.lgkaicodeservice.ai.model.message.AiResponseMessage;
 import com.lgk.lgkaicodeservice.ai.model.message.ToolExecutedMessage;
 import com.lgk.lgkaicodeservice.ai.model.message.ToolRequestMessage;
-import com.lgk.lgkaicodeservice.ai.tool.FileWriteTool;
+import com.lgk.lgkaicodeservice.ai.tool.*;
 import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
 import com.lgk.lgkaicodeservice.service.ChatHistoryService;
@@ -46,6 +46,9 @@ public class AiCodeGeneratorServiceFactory {
 
     @Resource
     private ChatHistoryService chatHistoryService;
+
+    @Resource
+    private ToolManager toolManager;
 
     /**
      * AI 服务实例缓存
@@ -107,11 +110,13 @@ public class AiCodeGeneratorServiceFactory {
             case VUE_PROJECT -> AiServices.builder(AiCodeGeneratorService.class)
                     .streamingChatModel(reasoningStreamingChatModel)
                     .chatMemoryProvider(memoryId -> chatMemory)
-                    .tools(new FileWriteTool())
+                    .tools(toolManager.getAllTools())
                     .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                             toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                     ))
                     .build();
+
+
             // HTML 和多文件生成使用默认模型
             case HTML, MULTI_FILE -> AiServices.builder(AiCodeGeneratorService.class)
                     .chatModel(chatModel)
