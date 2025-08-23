@@ -3,6 +3,12 @@ import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import {
+  Html5Outlined,
+  FileOutlined,
+  CodeOutlined,
+  QuestionCircleOutlined
+} from '@ant-design/icons-vue'
+import {
   getAppVoById,
   deployApp,
   updateApp,
@@ -14,6 +20,7 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import { getStaticPreviewUrl } from '../constants/urls'
+import { getCodeGenTypeConfig } from '@/constants/codeGenType'
 
 const route = useRoute()
 const router = useRouter()
@@ -635,6 +642,18 @@ onUnmounted(() => {
           </template>
         </a-dropdown>
 
+        <!-- 生成类型标签 -->
+        <a-tag
+          v-if="appInfo?.codeGenType"
+          :color="getCodeGenTypeConfig(appInfo.codeGenType).color"
+          class="gen-type-tag"
+        >
+          <template #icon>
+            <component :is="getCodeGenTypeConfig(appInfo.codeGenType).icon" />
+          </template>
+          {{ getCodeGenTypeConfig(appInfo.codeGenType).label }}
+        </a-tag>
+
         <a-input
           v-if="isEditing"
           v-model:value="editAppName"
@@ -806,6 +825,21 @@ onUnmounted(() => {
             <label>创建时间：</label>
             <span>{{ formatTime(appInfo?.createTime) }}</span>
           </div>
+          <div class="detail-item">
+            <label>生成类型：</label>
+            <div v-if="appInfo?.codeGenType" class="gen-type-info">
+              <a-tag
+                :color="getCodeGenTypeConfig(appInfo.codeGenType).color"
+                size="small"
+              >
+                <template #icon>
+                  <component :is="getCodeGenTypeConfig(appInfo.codeGenType).icon" />
+                </template>
+                {{ getCodeGenTypeConfig(appInfo.codeGenType).label }}
+              </a-tag>
+            </div>
+            <span v-else>-</span>
+          </div>
         </div>
 
         <div v-if="canEdit" class="detail-section">
@@ -852,11 +886,20 @@ onUnmounted(() => {
 .nav-left {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .app-name-btn {
   font-weight: 500;
   font-size: 16px;
+}
+
+.gen-type-tag {
+  margin-left: 8px;
+  font-size: 12px;
+  height: 24px;
+  line-height: 22px;
+  padding: 0 8px;
 }
 
 .nav-right {
@@ -1196,6 +1239,11 @@ onUnmounted(() => {
   justify-content: center;
   color: #666;
   font-size: 12px;
+}
+
+.gen-type-info {
+  display: flex;
+  align-items: center;
 }
 
 .action-buttons {

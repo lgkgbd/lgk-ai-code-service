@@ -1,5 +1,6 @@
 package com.lgk.lgkaicodeservice.service;
 
+import com.lgk.lgkaicodeservice.model.dto.app.AppAddRequest;
 import com.lgk.lgkaicodeservice.model.dto.app.AppQueryRequest;
 import com.lgk.lgkaicodeservice.model.entity.User;
 import com.lgk.lgkaicodeservice.model.vo.AppVO;
@@ -24,6 +25,8 @@ public interface AppService extends IService<App> {
     List<AppVO> getAppVOList(List<App> appList);
 
     Flux<String> chatToGenCode(Long appId, String message, User loginUser);
+
+    Long createApp(AppAddRequest appAddRequest, User loginUser);
 
     String deployApp(Long appId, User loginUser);
 

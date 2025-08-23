@@ -1,3 +1,10 @@
+import {
+  Html5Outlined,
+  FileOutlined,
+  CodeOutlined,
+  QuestionCircleOutlined
+} from '@ant-design/icons-vue'
+
 /**
  * 代码生成类型枚举
  */
@@ -15,19 +22,19 @@ export const CODE_GEN_TYPE_CONFIG = {
     label: '原生 HTML 模式',
     value: CodeGenTypeEnum.HTML,
     color: '#1890ff',
-    icon: 'html5-outlined'
+    icon: Html5Outlined
   },
   [CodeGenTypeEnum.MULTI_FILE]: {
     label: '原生多文件模式',
     value: CodeGenTypeEnum.MULTI_FILE,
     color: '#52c41a',
-    icon: 'file-outlined'
+    icon: FileOutlined
   },
   [CodeGenTypeEnum.VUE_PROJECT]: {
     label: 'Vue 工程模式',
     value: CodeGenTypeEnum.VUE_PROJECT,
     color: '#42b883',
-    icon: 'code-outlined'
+    icon: CodeOutlined
   }
 } as const
 
@@ -41,7 +48,7 @@ export function getCodeGenTypeConfig(type: string) {
     label: '未知类型',
     value: type,
     color: '#d9d9d9',
-    icon: 'question-circle-outlined'
+    icon: QuestionCircleOutlined
   }
 }
 
