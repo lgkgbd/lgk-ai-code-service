@@ -546,6 +546,37 @@ const saveAppName = async () => {
   }
 }
 
+// 下载应用代码
+const handleDownloadAppCode = async () => {
+  if (!appInfo.value?.id) return
+
+  try {
+    // 直接使用fetch下载ZIP文件，避免axios的响应拦截器处理
+    const response = await fetch(`http://localhost:8123/api/app/download/${appInfo.value.id}`, {
+      method: 'GET',
+      credentials: 'include',
+    })
+
+    if (response.ok) {
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${appInfo.value.appName || '应用'}.zip`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      message.success('应用代码下载成功')
+    } else {
+      message.error('下载失败')
+    }
+  } catch (error) {
+    console.error('下载应用代码失败:', error)
+    message.error('下载失败')
+  }
+}
+
 // 滚动到底部
 const scrollToBottom = () => {
   const messagesContainer = document.querySelector('.messages-container')
@@ -621,6 +652,14 @@ onUnmounted(() => {
         >
           <info-circle-outlined />
           应用详情
+        </a-button>
+        <a-button
+          @click="handleDownloadAppCode"
+          style="margin-right: 8px;"
+          :disabled="!canEdit"
+        >
+          <download-outlined />
+          下载代码
         </a-button>
         <a-button
           type="primary"
