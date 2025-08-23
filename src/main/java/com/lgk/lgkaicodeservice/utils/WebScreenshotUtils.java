@@ -24,17 +24,34 @@ import java.util.UUID;
 @Slf4j
 public class WebScreenshotUtils {
 
-    private static final WebDriver webDriver;
+    private static final ThreadLocal<WebDriver> driverThreadLocal = new ThreadLocal<>();
 
-    static {
-        final int DEFAULT_WIDTH = 1600;
-        final int DEFAULT_HEIGHT = 900;
-        webDriver = initChromeDriver(DEFAULT_WIDTH, DEFAULT_HEIGHT);
+    /**
+     * 获取当前线程的WebDriver实例
+     */
+    public static WebDriver getDriver() {
+        WebDriver driver = driverThreadLocal.get();
+        if (driver == null) {
+            driver = initChromeDriver(1600, 900);
+            driverThreadLocal.set(driver);
+        }
+        return driver;
     }
 
-    @PreDestroy
-    public void destroy() {
-        webDriver.quit();
+    /**
+     * 清理当前线程的WebDriver
+     */
+    public static void cleanupDriver() {
+        WebDriver driver = driverThreadLocal.get();
+        if (driver != null) {
+            try {
+                driver.quit();
+            } catch (Exception e) {
+                log.error("清理WebDriver时出现异常", e);
+            } finally {
+                driverThreadLocal.remove();
+            }
+        }
     }
 
     /**
@@ -147,6 +164,8 @@ public class WebScreenshotUtils {
             final String IMAGE_SUFFIX = ".png";
             // 原始截图文件路径
             String imageSavePath = rootPath + File.separator + RandomUtil.randomNumbers(5) + IMAGE_SUFFIX;
+            // 获取当前线程的WebDriver
+            WebDriver webDriver = getDriver();
             // 访问网页
             webDriver.get(webUrl);
             // 等待页面加载完成
