@@ -65,3 +65,5 @@ create table chat_history
     INDEX idx_appId_createTime (appId, createTime) -- 游标查询核心索引
 ) comment '对话历史' collate = utf8mb4_unicode_ci;
 
+-- 新加一个思考的字段, 框架升级再用
+-- ALTER TABLE chat_history ADD COLUMN reasoningContent TEXT NULL AFTER message;
