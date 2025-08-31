@@ -17,6 +17,7 @@ spring:
       password:
       # 过期时间
       ttl: 3600
+      database: 0
   # session 配置
   session:
     store-type: redis
