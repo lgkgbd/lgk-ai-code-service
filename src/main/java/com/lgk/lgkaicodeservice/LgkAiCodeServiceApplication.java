@@ -4,9 +4,11 @@ import dev.langchain4j.community.store.embedding.redis.spring.RedisEmbeddingStor
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 
 //排除 embedding 的自动装配，本项目用不到
 @SpringBootApplication(exclude = {RedisEmbeddingStoreAutoConfiguration.class})
+@EnableCaching
 @MapperScan("com.lgk.lgkaicodeservice.mapper")
 public class LgkAiCodeServiceApplication {
 
