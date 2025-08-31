@@ -18,6 +18,45 @@ const loginUserStore = useLoginUserStore()
 const userPrompt = ref('')
 const isCreating = ref(false)
 
+// 输入框高度控制
+const inputHeight = ref(150) // 初始高度
+const minInputHeight = 150 // 最小高度
+const maxInputHeight = 220 // 最大高度
+const isInputDragging = ref(false) // 输入框拖拽状态
+
+// 开始拖拽（输入框高度）
+const startInputDrag = (e: MouseEvent) => {
+  isInputDragging.value = true
+  document.addEventListener('mousemove', onInputDrag)
+  document.addEventListener('mouseup', stopInputDrag)
+  e.preventDefault()
+}
+
+// 拖拽中（输入框高度）
+const onInputDrag = (e: MouseEvent) => {
+  if (!isInputDragging.value) return
+  
+  // 获取输入框元素
+  const inputWrapper = document.querySelector('.input-wrapper')
+  if (!inputWrapper) return
+  
+  // 计算新高度
+  const wrapperRect = inputWrapper.getBoundingClientRect()
+  const newHeight = e.clientY - wrapperRect.top
+  
+  // 应用高度限制
+  if (newHeight >= minInputHeight && newHeight <= maxInputHeight) {
+    inputHeight.value = newHeight
+  }
+}
+
+// 停止拖拽（输入框高度）
+const stopInputDrag = () => {
+  isInputDragging.value = false
+  document.removeEventListener('mousemove', onInputDrag)
+  document.removeEventListener('mouseup', stopInputDrag)
+}
+
 // 我的应用列表
 const myApps = reactive({
   data: [] as Record<string, any>[],
@@ -239,20 +278,22 @@ onMounted(() => {
         <div class="input-container">
           <div class="input-wrapper">
             <a-textarea
-              v-model:value="userPrompt"
-              placeholder="请描述你想生成的网站，越详细效果越好哦~"
-              :disabled="isCreating"
-              :auto-size="{ minRows: 3, maxRows: 6 }"
-            />
+                v-model:value="userPrompt"
+                placeholder="请描述你想生成的网站，越详细效果越好哦~"
+                :disabled="isCreating"
+                :style="{ height: `${inputHeight}px` }"
+              />
             <a-button
-              type="primary"
-              size="large"
-              :loading="isCreating"
-              @click="handleCreateApp"
-              class="submit-btn"
-            >
-              <span class="submit-icon">↑</span>
-            </a-button>
+                type="primary"
+                size="large"
+                :loading="isCreating"
+                @click="handleCreateApp"
+                class="submit-btn"
+              >
+                <span class="submit-icon">↑</span>
+              </a-button>
+              
+
           </div>
         </div>
       </div>
@@ -550,9 +591,15 @@ onMounted(() => {
 }
 
 .input-wrapper {
-  flex: 1;
-  position: relative;
-}
+    flex: 1;
+    position: relative;
+  }
+  
+  /* 拖拽时禁用文本选择 */
+  .input-section.dragging {
+    user-select: none;
+    cursor: row-resize;
+  }
 
 .input-container .ant-input,
 .input-container .ant-input-textarea {
@@ -579,32 +626,36 @@ onMounted(() => {
 }
 
 .submit-btn {
-  position: absolute;
-  right: 10px;
-  bottom: 10px;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  background: #4a90e2;
-  border: none;
-  box-shadow: 0 10px 24px rgba(74, 144, 226, 0.45);
-  transition: all 0.3s ease;
-}
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: #1890ff;
+    border: none;
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.6);
+    transition: all 0.3s ease;
+  }
 
-.submit-btn:hover {
-  background: #357abd;
-  transform: translateY(-2px);
-  box-shadow: 0 14px 28px rgba(74, 144, 226, 0.55);
-}
+  .submit-btn:hover {
+    background: #40a9ff;
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.8);
+  }
 
-.submit-icon {
-  font-size: 20px;
-  color: white;
-}
+  .submit-btn:active {
+    transform: scale(0.95);
+  }
+
+  .submit-icon {
+    font-size: 16px;
+    color: white;
+  }
 
 /* 快捷提示词 */
 .quick-prompts {
