@@ -7,20 +7,17 @@
       </div>
 
       <div class="center">
-        <a-menu
-          mode="horizontal"
-          :selectedKeys="selectedKeys"
-          class="main-menu"
-        >
-          <a-menu-item
+        <div class="custom-menu">
+          <a
             v-for="item in filteredMenuItems"
             :key="item.key"
-            @click="onMenuItemClick(item.path)"
-            class="menu-item"
+            :href="'#'"
+            @click.prevent="onMenuItemClick(item.path)"
+            :class="['menu-link', { 'active': isMenuItemActive(item) }]"
           >
             <span class="menu-text">{{ item.label }}</span>
-          </a-menu-item>
-        </a-menu>
+          </a>
+        </div>
       </div>
 
       <div class="right">
@@ -61,7 +58,7 @@ import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { LogoutOutlined } from '@ant-design/icons-vue'
 import { userLogout } from '@/api/userController.ts'
 import { message } from 'ant-design-vue'
-import { hasAccess } from '@/access/index.ts'
+import checkAccess from '@/access/checkAccess.ts'
 
 type MenuItem = {
   key: string
@@ -78,28 +75,20 @@ const loginUserStore = useLoginUserStore()
 const route = useRoute()
 const router = useRouter()
 
-// 过滤菜单项，根据权限显示
+// 过滤有权限的菜单项
 const filteredMenuItems = computed(() => {
-  return props.menuItems.filter((item) => {
-    // 如果没有设置权限要求，则所有人都可以访问
-    if (!item.access) {
-      return true
-    }
-    // 检查用户是否有权限访问该菜单
-    return hasAccess(item.access)
-  })
-})
+  return props.menuItems.filter(item => {
+    return checkAccess(loginUserStore.loginUser, item.access);
+  });
+});
 
-const selectedKeys = computed<string[]>(() => {
+// 检查菜单项是否激活
+const isMenuItemActive = (item: MenuItem) => {
   // 1) 精确匹配优先
-  const exact = filteredMenuItems.value.find((m) => m.path === route.path)
-  if (exact) return [exact.key]
+  if (item.path === route.path) return true
   // 2) 最长前缀匹配（避免 '/' 抢占所有路径）
-  const matched = [...filteredMenuItems.value]
-    .filter((m) => route.path.startsWith(m.path))
-    .sort((a, b) => b.path.length - a.path.length)[0]
-  return [matched?.key ?? '']
-})
+  return route.path.startsWith(item.path) && item.path !== '/'
+}
 
 // 用户注销
 const doLogout = async () => {
@@ -194,27 +183,30 @@ function onMenuItemClick(path: string) {
   justify-content: center;
 }
 
-.main-menu {
-  background: transparent;
-  border-bottom: none;
-  line-height: 64px;
+.custom-menu {
+  display: flex;
+  align-items: center;
+  height: 64px;
 }
 
-.main-menu :deep(.ant-menu-item) {
+.menu-link {
+  display: inline-block;
   height: 64px;
   line-height: 64px;
   padding: 0 24px;
   margin: 0 4px;
   border-radius: 6px;
   transition: all 0.3s ease;
+  color: #333;
+  text-decoration: none;
 }
 
-.main-menu :deep(.ant-menu-item:hover) {
+.menu-link:hover {
   background: #f5f5f5;
   color: #1890ff;
 }
 
-.main-menu :deep(.ant-menu-item-selected) {
+.menu-link.active {
   background: #e6f7ff;
   color: #1890ff;
   border-bottom: 2px solid #1890ff;
