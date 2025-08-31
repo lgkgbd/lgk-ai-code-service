@@ -3,7 +3,7 @@
     <div class="footer-content">
       <div class="footer-text">
         <a
-          href="https://ghkzkbhjcxjy.eu-central-1.clawcloudrun.com"
+          href="https://github.com/lgkgbd/lgk-ai-code-service"
           target="_blank"
           rel="noopener noreferrer"
           class="footer-link"
