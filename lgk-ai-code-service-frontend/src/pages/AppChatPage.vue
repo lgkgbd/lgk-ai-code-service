@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { message, Modal, Alert } from 'ant-design-vue'
+import { showSuccess, showError } from '@/utils/message'
 import {
   Html5Outlined,
   FileOutlined,
@@ -600,15 +601,15 @@ const handleDeploy = async () => {
         onOk: () => {
           // 可以复制链接到剪贴板
           navigator.clipboard.writeText(String(res.data.data))
-          message.success('链接已复制到剪贴板')
+          showSuccess('链接已复制到剪贴板')
         }
       })
     } else {
-      message.error(res.data.message || '部署失败')
+      showError(res.data.message || '部署失败')
     }
   } catch (error) {
     console.error('部署失败:', error)
-    message.error('部署失败')
+    showError('部署失败')
   } finally {
     isDeploying.value = false
   }
@@ -660,13 +661,13 @@ const handleDownloadAppCode = async () => {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      message.success('应用代码下载成功')
+      showSuccess('应用代码下载成功')
     } else {
-      message.error('下载失败')
+      showError('下载失败')
     }
   } catch (error) {
     console.error('下载应用代码失败:', error)
-    message.error('下载失败')
+    showError('下载失败')
   }
 }
 
