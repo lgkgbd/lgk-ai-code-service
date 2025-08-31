@@ -3,6 +3,8 @@ package com.lgk.lgkaicodeservice.ai;
 import cn.hutool.json.JSONUtil;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.lgk.lgkaicodeservice.ai.guardrail.PromptSafetyInputGuardrail;
+import com.lgk.lgkaicodeservice.ai.guardrail.RetryOutputGuardrail;
 import com.lgk.lgkaicodeservice.ai.model.enums.CodeGenTypeEnum;
 import com.lgk.lgkaicodeservice.ai.model.message.AiResponseMessage;
 import com.lgk.lgkaicodeservice.ai.model.message.ToolExecutedMessage;
@@ -107,7 +109,10 @@ public class AiCodeGeneratorServiceFactory {
                 yield AiServices.builder(AiCodeGeneratorService.class)
                         .streamingChatModel(reasoningStreamingChatModel)
                         .chatMemoryProvider(memoryId -> chatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail()) //添加输入护轨
+                        //.outputGuardrails(new RetryOutputGuardrail()) //添加输出护轨，为了流式输出，这里不使用
                         .tools(toolManager.getAllTools())
+                        .maxSequentialToolsInvocations(20)
                         .hallucinatedToolNameStrategy(toolExecutionRequest -> ToolExecutionResultMessage.from(
                                 toolExecutionRequest, "Error: there is no tool called " + toolExecutionRequest.name()
                         ))
@@ -120,6 +125,8 @@ public class AiCodeGeneratorServiceFactory {
                         .chatModel(chatModel)
                         .streamingChatModel(openAiStreamingChatModel)
                         .chatMemory(chatMemory)
+                        .inputGuardrails(new PromptSafetyInputGuardrail()) //添加输入护轨
+                        //.outputGuardrails(new RetryOutputGuardrail()) //添加输出护轨
                         .build();
             }
             default -> throw new BusinessException(ErrorCode.SYSTEM_ERROR,
