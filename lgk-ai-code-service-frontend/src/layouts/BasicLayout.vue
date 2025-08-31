@@ -48,11 +48,10 @@ const menuItems = reactive<MenuItem[]>([
 .content-wrapper {
   max-width: 1200px;
   margin: 0 auto;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  min-height: calc(100vh - 200px);
+  background: transparent;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
 }
 
 /* 响应式设计 */
