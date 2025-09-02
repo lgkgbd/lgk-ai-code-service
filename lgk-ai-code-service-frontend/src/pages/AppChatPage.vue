@@ -106,12 +106,23 @@ const editAppName = ref('')
 // 分割线拖拽相关
 const isDragging = ref(false)
 const chatWidth = ref(400) // 聊天区域宽度
-const minChatWidth = 300 // 最小宽度
-const maxChatWidth = 800 // 最大宽度
+const minChatWidth = 300 // 聊天区域最小宽度
+const minPreviewWidth = 400 // 预览区域最小宽度
 
 // 计算默认宽度比例 2:3
 const defaultChatWidth = Math.floor(window.innerWidth * 0.4) // 40% 对应 2:3 比例
-chatWidth.value = Math.max(minChatWidth, Math.min(maxChatWidth, defaultChatWidth))
+chatWidth.value = Math.max(minChatWidth, Math.min(window.innerWidth - minPreviewWidth, defaultChatWidth))
+
+// 监听窗口大小变化，重新计算宽度限制
+const handleResize = () => {
+  const maxChatWidth = window.innerWidth - minPreviewWidth
+  if (chatWidth.value > maxChatWidth) {
+    chatWidth.value = maxChatWidth
+  }
+  if (chatWidth.value < minChatWidth) {
+    chatWidth.value = minChatWidth
+  }
+}
 
 // 开始拖拽
 const startDrag = (e: MouseEvent) => {
@@ -119,15 +130,27 @@ const startDrag = (e: MouseEvent) => {
   document.addEventListener('mousemove', onDrag)
   document.addEventListener('mouseup', stopDrag)
   e.preventDefault()
+  
+  // 添加拖拽时的样式
+  document.body.style.cursor = 'col-resize'
+  document.body.style.userSelect = 'none'
 }
 
 // 拖拽中
 const onDrag = (e: MouseEvent) => {
   if (!isDragging.value) return
-
+  
+  e.preventDefault()
   const newWidth = e.clientX
+  const maxChatWidth = window.innerWidth - minPreviewWidth // 确保预览区域有最小宽度
+  
+  // 限制在最小和最大宽度之间
   if (newWidth >= minChatWidth && newWidth <= maxChatWidth) {
     chatWidth.value = newWidth
+  } else if (newWidth < minChatWidth) {
+    chatWidth.value = minChatWidth
+  } else if (newWidth > maxChatWidth) {
+    chatWidth.value = maxChatWidth
   }
 }
 
@@ -136,6 +159,10 @@ const stopDrag = () => {
   isDragging.value = false
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
+  
+  // 恢复默认样式
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
 }
 
 // 检查权限
@@ -772,20 +799,28 @@ onMounted(async () => {
   await loadAppInfo()
   await loadChatHistory(true)
   await tryAutoSendInitPrompt()
+  
+  // 添加窗口大小变化监听
+  window.addEventListener('resize', handleResize)
 })
 
 onUnmounted(() => {
   // 清理可能的SSE连接
   // 清理iframe消息监听
   window.removeEventListener('message', handleIframeMessage)
+  // 清理窗口大小变化监听
+  window.removeEventListener('resize', handleResize)
+  // 清理拖拽事件监听
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
 })
 </script>
 
 <template>
   <div class="app-chat-page">
-    <!-- 顶部导航栏 -->
-    <div class="top-nav">
-      <div class="nav-left">
+    <!-- 应用信息栏 -->
+    <div class="app-info-bar">
+      <div class="app-info-left">
         <a-dropdown v-if="appInfo">
           <a-button type="text" class="app-name-btn">
             {{ appInfo.appName || '未命名应用' }}
@@ -827,7 +862,7 @@ onUnmounted(() => {
         />
       </div>
 
-      <div class="nav-right">
+      <div class="app-info-right">
         <a-button
           @click="showAppDetail"
           style="margin-right: 8px;"
@@ -952,6 +987,7 @@ onUnmounted(() => {
         class="resize-handle"
         :class="{ 'dragging': isDragging }"
         @mousedown="startDrag"
+        :title="isDragging ? '拖拽调整大小...' : '拖拽调整左右区域大小'"
       >
         <div class="resize-indicator"></div>
       </div>
@@ -1070,13 +1106,16 @@ onUnmounted(() => {
 
 <style scoped>
 .app-chat-page {
-  height: 100vh;
+  height: calc(100vh - 64px - 65px); /* 减去 header 和 footer 的高度 */
   display: flex;
   flex-direction: column;
   background: #f5f5f5;
+  width: 100vw;
+  position: relative;
+  overflow: hidden;
 }
 
-.top-nav {
+.app-info-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1087,7 +1126,7 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.nav-left {
+.app-info-left {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -1106,7 +1145,7 @@ onUnmounted(() => {
   padding: 0 8px;
 }
 
-.nav-right {
+.app-info-right {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1116,6 +1155,9 @@ onUnmounted(() => {
   flex: 1;
   display: flex;
   overflow: hidden;
+  width: 100%;
+  position: relative;
+  min-height: 0; /* 确保 flex 子元素能够正确收缩 */
 }
 
 .chat-section {
@@ -1243,6 +1285,7 @@ onUnmounted(() => {
   flex-direction: column;
   background: white;
   overflow: hidden;
+  min-width: 0; /* 确保能够正确收缩 */
 }
 
 .preview-header {
@@ -1294,49 +1337,93 @@ onUnmounted(() => {
 
 /* 可拖拽分割线样式 */
 .resize-handle {
-  width: 6px;
+  width: 8px;
   cursor: col-resize;
   background-color: #e8e8e8;
-  border-radius: 3px;
-  transition: background-color 0.2s ease;
+  border-radius: 4px;
+  transition: all 0.2s ease;
   flex-shrink: 0;
   position: relative;
   z-index: 10;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .resize-handle:hover {
   background-color: #d0d0d0;
+  width: 10px;
 }
 
 .resize-handle.dragging {
   background-color: #1890ff;
+  width: 10px;
+  box-shadow: 0 0 8px rgba(24, 144, 255, 0.3);
 }
 
 .resize-indicator {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 2px;
-  height: 40px;
-  background-color: #1890ff;
-  border-radius: 1px;
+  width: 3px;
+  height: 60px;
+  background-color: #999;
+  border-radius: 2px;
   opacity: 0;
   transition: opacity 0.2s ease;
+  position: relative;
+}
+
+.resize-indicator::before,
+.resize-indicator::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background-color: #999;
+  border-radius: 50%;
+  left: 0;
+}
+
+.resize-indicator::before {
+  top: -6px;
+}
+
+.resize-indicator::after {
+  bottom: -6px;
 }
 
 .resize-handle:hover .resize-indicator {
-  opacity: 1;
+  opacity: 0.6;
+  background-color: #666;
+}
+
+.resize-handle:hover .resize-indicator::before,
+.resize-handle:hover .resize-indicator::after {
+  background-color: #666;
 }
 
 .resize-handle.dragging .resize-indicator {
   opacity: 1;
+  background-color: white;
+}
+
+.resize-handle.dragging .resize-indicator::before,
+.resize-handle.dragging .resize-indicator::after {
+  background-color: white;
 }
 
 /* 拖拽时禁用文本选择 */
 .main-content.dragging {
   user-select: none;
   cursor: col-resize;
+}
+
+.main-content.dragging * {
+  user-select: none;
+  pointer-events: none;
+}
+
+.main-content.dragging .resize-handle {
+  pointer-events: auto;
 }
 
 /* 代码块样式 */
@@ -1461,5 +1548,86 @@ onUnmounted(() => {
 
 .action-buttons .ant-btn {
   flex: 1;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .chat-section {
+    min-width: 280px;
+  }
+  
+  /* 调整最小宽度以适应较小屏幕 */
+  .resize-handle {
+    width: 6px;
+  }
+  
+  .resize-handle:hover,
+  .resize-handle.dragging {
+    width: 8px;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-chat-page {
+    height: calc(100vh - 64px - 65px);
+    width: 100vw;
+  }
+  
+  .app-info-bar {
+    padding: 8px 16px;
+  }
+  
+  .app-name-btn {
+    font-size: 14px;
+  }
+  
+  .gen-type-tag {
+    font-size: 11px;
+    height: 22px;
+    line-height: 20px;
+    padding: 0 6px;
+  }
+  
+  .chat-section {
+    min-width: 250px;
+  }
+}
+
+@media (max-width: 576px) {
+  .app-chat-page {
+    height: calc(100vh - 64px - 65px);
+    width: 100vw;
+  }
+  
+  .app-info-bar {
+    padding: 8px 12px;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .app-info-right {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .chat-section {
+    width: 100% !important;
+    height: 50%;
+    border-right: none;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  
+  .resize-handle {
+    display: none;
+  }
+  
+  .preview-section {
+    height: 50%;
+  }
 }
 </style>

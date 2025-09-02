@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import GlobalHeader from '@/components/GlobalHeader.vue'
 import GlobalFooter from '@/components/GlobalFooter.vue'
 import ACCESS_ENUM from '@/access/accessEnum'
+
+const route = useRoute()
+
+// 检查是否是聊天页面
+const isChatPage = computed(() => {
+  return route.path.includes('/app/chat/')
+})
 
 type MenuItem = {
   key: string
@@ -23,8 +31,8 @@ const menuItems = reactive<MenuItem[]>([
   <a-layout class="basic-layout">
     <GlobalHeader :menu-items="menuItems" />
 
-    <a-layout-content class="site-content">
-      <div class="content-wrapper">
+    <a-layout-content class="site-content" :class="{ 'chat-page-content': isChatPage }">
+      <div class="content-wrapper" :class="{ 'chat-page-wrapper': isChatPage }">
         <router-view />
       </div>
     </a-layout-content>
@@ -52,6 +60,19 @@ const menuItems = reactive<MenuItem[]>([
   border-radius: 0;
   box-shadow: none;
   overflow: visible;
+}
+
+/* 聊天页面特殊样式 */
+.chat-page-content {
+  padding: 0;
+}
+
+.chat-page-wrapper {
+  max-width: none;
+  margin: 0;
+  width: 100vw;
+  margin-left: calc(-50vw + 50%);
+  margin-right: calc(-50vw + 50%);
 }
 
 /* 响应式设计 */
