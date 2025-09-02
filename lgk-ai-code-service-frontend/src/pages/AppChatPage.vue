@@ -28,6 +28,8 @@ import { listAppChatHistory } from '@/api/chatHistoryController'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
+import { initCodeBlockToggle, createCollapsibleCodeBlock } from '@/utils/codeBlockUtils.js'
+import '@/assets/collapsible-code.css'
 import { getStaticPreviewUrl } from '../constants/urls'
 import { getCodeGenTypeConfig } from '@/constants/codeGenType'
 import { VisualEditor, type ElementInfo } from '@/utils/visualEditor'
@@ -39,23 +41,35 @@ const loginUserStore = useLoginUserStore()
 
 // Markdown 渲染器（支持代码高亮、自动链接、换行）
 const md = new MarkdownIt({
-  html: false,
+  html: true, // 允许HTML，用于折叠功能
   linkify: true,
   breaks: true,
   highlight: function (str: string, lang: string) {
+    let highlightedCode = ''
     if (lang && hljs.getLanguage(lang)) {
       try {
-        return `<pre class="code-block"><code class="language-${lang}">${hljs.highlight(str, { language: lang }).value}</code></pre>`
-      } catch {}
+        highlightedCode = hljs.highlight(str, { language: lang }).value
+      } catch {
+        highlightedCode = str
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+      }
+    } else {
+      highlightedCode = str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
     }
-    const escaped = str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-    return `<pre class=\"code-block\"><code>${escaped}</code></pre>`
+
+    // 使用工具函数创建可折叠的代码块
+    return createCollapsibleCodeBlock(str, lang, highlightedCode)
   }
 })
 const renderMarkdown = (text: string) => (text ? md.render(text) : '')
+
+// 初始化代码块切换功能
+initCodeBlockToggle()
 
 // 应用信息
 const appInfo = ref<API.AppVO | null>(null)

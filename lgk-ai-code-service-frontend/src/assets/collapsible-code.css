@@ -1,0 +1,166 @@
+/* 可折叠代码块样式 */
+.collapsible-code-block {
+  margin: 2px 0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e8e8e8;
+  transition: all 0.2s ease;
+}
+
+.collapsible-code-block:hover {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  border-color: #d0d0d0;
+}
+
+/* 折叠状态下的样式 - 极小间距 */
+.collapsible-code-block:not(.expanded) {
+  margin: 1px 0;
+  box-shadow: none;
+  border: 1px solid #f0f0f0;
+}
+
+.code-header {
+  display: flex;
+  align-items: center;
+  padding: 2px 6px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  position: relative;
+  min-height: 20px;
+}
+
+.code-header:hover {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+}
+
+.code-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  border-radius: 0 1px 1px 0;
+}
+
+.code-language {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: #495057;
+  background: #ffffff;
+  padding: 1px 3px;
+  border-radius: 2px;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 0 1px rgba(0, 0, 0, 0.1);
+  margin-right: 3px;
+  line-height: 1.2;
+}
+
+.toggle-icon {
+  font-size: 9px;
+  color: #6c757d;
+  transition: all 0.2s ease;
+  transform-origin: center;
+  margin-left: 1px;
+  line-height: 1;
+}
+
+.code-header:hover .toggle-icon {
+  color: #495057;
+  transform: scale(1.1);
+}
+
+.code-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease-out, opacity 0.3s ease-out;
+  opacity: 0;
+}
+
+.code-content.expanded {
+  max-height: 2000px;
+  opacity: 1;
+}
+
+.code-content.expanded .code-block {
+  padding: 8px;
+}
+
+.code-content:not(.expanded) .code-block {
+  padding: 0;
+}
+
+/* 用户消息中的可折叠代码块样式 */
+.user-message .collapsible-code-block {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.user-message .collapsible-code-block:hover {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.user-message .code-header {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.1) 100%);
+}
+
+.user-message .code-header:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.15) 100%);
+}
+
+.user-message .code-header::before {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.6) 100%);
+}
+
+.user-message .code-language {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.user-message .toggle-icon {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.user-message .code-header:hover .toggle-icon {
+  color: white;
+}
+
+/* 响应式代码块 */
+@media (max-width: 768px) {
+  .collapsible-code-block {
+    margin: 3px 0;
+    border-radius: 4px;
+  }
+  
+  .collapsible-code-block:not(.expanded) {
+    margin: 1px 0;
+  }
+  
+  .code-header {
+    padding: 3px 6px;
+  }
+  
+  .code-language {
+    font-size: 10px;
+    padding: 1px 3px;
+  }
+  
+  .toggle-icon {
+    font-size: 9px;
+  }
+  
+  .code-content.expanded .code-block {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+}
