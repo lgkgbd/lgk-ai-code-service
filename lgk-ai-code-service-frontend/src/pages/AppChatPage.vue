@@ -25,6 +25,7 @@ import {
 } from '@/api/appController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import { listAppChatHistory } from '@/api/chatHistoryController'
+import { healthCheck } from '@/api/healthController'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
@@ -427,8 +428,7 @@ const generateCode = async (promptMessage: string) => {
       isGenerating.value = false
       if (fullContent.trim()) {
         setTimeout(async () => {
-          await loadAppInfo()
-          updatePreview()
+          await refreshAfterAIFinish()
         }, 1000)
         message.success('代码生成完成')
       } else {
@@ -485,7 +485,7 @@ const generateCode = async (promptMessage: string) => {
               commitDelta()
               isGenerating.value = false
               if (fullContent.trim()) {
-                setTimeout(async () => { await loadAppInfo(); updatePreview() }, 1000)
+                setTimeout(async () => { await refreshAfterAIFinish() }, 1000)
                 message.success('代码生成完成')
               } else {
                 handleError(new Error('生成失败，无内容'), aiMsg)
@@ -561,10 +561,18 @@ const handleError = (error: unknown, aiMsg?: ChatMessage) => {
   streamOrderGuard.value.active = false
 }
 
+const refreshAfterAIFinish = async () => {
+  try { await healthCheck() } catch (e) { console.warn('healthCheck failed', e) }
+  await loadAppInfo()
+  updatePreview()
+}
+
 // 更新预览
 const updatePreview = () => {
   if (appInfo.value?.codeGenType && appInfo.value?.id) {
-    websiteUrl.value = getStaticPreviewUrl(String(appInfo.value.codeGenType), String(appInfo.value.id))
+    const baseUrl = getStaticPreviewUrl(String(appInfo.value.codeGenType), String(appInfo.value.id))
+    const urlWithBust = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}ts=${Date.now()}`
+    websiteUrl.value = urlWithBust
     showWebsite.value = true
     console.log('AppChatPage: preview updated:', websiteUrl.value)
 
