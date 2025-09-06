@@ -32,6 +32,7 @@ build/
 ### VS Code ###
 .vscode/
 
+.codebuddy/
 
 ### CUSTOM ###
 application-local.yml
