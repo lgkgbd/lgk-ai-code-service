@@ -1,4 +1,7 @@
 // 可折叠代码块工具函数
+/**
+ * 初始化代码块切换功能
+ */
 export function initCodeBlockToggle() {
   if (typeof window !== 'undefined') {
     window.toggleCodeBlock = (codeId) => {
@@ -13,29 +16,37 @@ export function initCodeBlockToggle() {
           // 折叠
           codeContent.classList.remove('expanded')
           codeBlock.classList.remove('expanded')
-          toggleIcon.textContent = '▶️'
+          toggleIcon.innerHTML = '▶'
         } else {
           // 展开
           codeContent.classList.add('expanded')
           codeBlock.classList.add('expanded')
-          toggleIcon.textContent = '🔽'
+          toggleIcon.innerHTML = '▼'
         }
       }
     }
   }
 }
 
-// 创建可折叠代码块HTML
+/**
+ * 创建可折叠代码块HTML
+ * @param {string} str - 原始代码字符串
+ * @param {string} lang - 语言类型
+ * @param {string} highlightedCode - 高亮后的代码
+ * @returns {string} HTML字符串
+ */
 export function createCollapsibleCodeBlock(str, lang, highlightedCode) {
   const codeId = `code-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   
   return `
-    <div class="collapsible-code-block">
+    <div class="collapsible-code-block expanded">
       <div class="code-header" onclick="toggleCodeBlock('${codeId}')">
-        <span class="code-language">${lang || 'text'}</span>
-        <span class="toggle-icon" id="icon-${codeId}">▶️</span>
+        <div class="code-header-left">
+          <span class="code-language">${lang || 'text'}</span>
+        </div>
+        <span class="toggle-icon" id="icon-${codeId}">▼</span>
       </div>
-      <div class="code-content" id="${codeId}">
+      <div class="code-content expanded" id="${codeId}">
         <pre class="code-block"><code class="language-${lang || 'text'}">${highlightedCode}</code></pre>
       </div>
     </div>

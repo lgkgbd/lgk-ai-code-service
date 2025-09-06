@@ -28,7 +28,6 @@ import { listAppChatHistory } from '@/api/chatHistoryController'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
-import { initCodeBlockToggle, createCollapsibleCodeBlock } from '@/utils/codeBlockUtils.js'
 import '@/assets/collapsible-code.css'
 import { getStaticPreviewUrl } from '../constants/urls'
 import { getCodeGenTypeConfig } from '@/constants/codeGenType'
@@ -44,6 +43,7 @@ const md = new MarkdownIt({
   html: true, // 允许HTML，用于折叠功能
   linkify: true,
   breaks: true,
+  typographer: true,
   highlight: function (str: string, lang: string) {
     let highlightedCode = ''
     if (lang && hljs.getLanguage(lang)) {
@@ -62,14 +62,82 @@ const md = new MarkdownIt({
         .replace(/>/g, '&gt;')
     }
 
-    // 使用工具函数创建可折叠的代码块
-    return createCollapsibleCodeBlock(str, lang, highlightedCode)
+    // 直接返回高亮后的代码，fence 渲染器会包装为可折叠块
+    return highlightedCode
   }
 })
-const renderMarkdown = (text: string) => (text ? md.render(text) : '')
 
-// 初始化代码块切换功能
-initCodeBlockToggle()
+/**
+ * 自定义 fence 渲染器：把代码块渲染为可折叠组件
+ */
+md.renderer.rules.fence = (tokens, idx) => {
+  const token = tokens[idx]
+  const info = token.info ? md.utils.unescapeAll(token.info).trim() : ''
+  const lang = (info.split(/\s+/g)[0] || 'text').toLowerCase()
+  const codeRaw = token.content || ''
+  // 去除所有首尾空行与 BOM，避免顶部/底部白带（兼容 CRLF）
+  const code = (() => {
+    const lines = codeRaw.replace(/^\uFEFF?/, '').split(/\r?\n/);
+    while (lines.length && /^\s*$/.test(lines[0])) lines.shift();
+    while (lines.length && /^\s*$/.test(lines[lines.length - 1])) lines.pop();
+    return lines.join('\n');
+  })()
+
+  let highlightedCode = code
+  if (lang && hljs.getLanguage(lang)) {
+    try {
+      highlightedCode = hljs.highlight(code, { language: lang }).value
+    } catch {
+      highlightedCode = md.utils.escapeHtml(code)
+    }
+  } else {
+    highlightedCode = md.utils.escapeHtml(code)
+  }
+
+  // 使用原生 details/summary 折叠（默认展开，紧贴上一行文字）
+  return `
+    <details class="md-code-details" open>
+      <summary class="md-code-summary">
+        <span class="md-code-lang">${(lang || 'text').toUpperCase()}</span>
+      </summary>
+      <pre class="md-code-pre"><code class="language-${lang || 'text'}">${highlightedCode}</code></pre>
+    </details>
+  `
+}
+
+// 自定义渲染规则以减少空白
+md.renderer.rules.paragraph_open = () => '<p class="md-paragraph">'
+md.renderer.rules.paragraph_close = () => '</p>'
+md.renderer.rules.heading_open = (tokens, idx) => {
+  const level = tokens[idx].markup.length
+  return `<h${level} class="md-heading md-h${level}">`
+}
+md.renderer.rules.heading_close = (tokens, idx) => {
+  const level = tokens[idx].markup.length
+  return `</h${level}>`
+}
+
+const renderMarkdown = (text: string) => {
+  if (!text) return ''
+  let rendered = md.render(text)
+
+  // 移除多余的空行和空白
+  rendered = rendered.replace(/\n\s*\n\s*\n/g, '\n\n')
+
+  // 移除代码块之间的多余空白
+  rendered = rendered.replace(/(<\/div>\s*)\n+(\s*<div class="collapsible-code-block">)/g, '$1$2')
+
+  // 移除段落和代码块之间的多余空白
+  rendered = rendered.replace(/(<\/p>\s*)\n+(\s*<div class="collapsible-code-block">)/g, '$1$2')
+  rendered = rendered.replace(/(<\/div>\s*)\n+(\s*<p class="md-paragraph">)/g, '$1$2')
+
+  // 移除开头和结尾的空白
+  rendered = rendered.trim()
+
+  return rendered
+}
+
+
 
 // 应用信息
 const appInfo = ref<API.AppVO | null>(null)
@@ -144,7 +212,7 @@ const startDrag = (e: MouseEvent) => {
   document.addEventListener('mousemove', onDrag)
   document.addEventListener('mouseup', stopDrag)
   e.preventDefault()
-  
+
   // 添加拖拽时的样式
   document.body.style.cursor = 'col-resize'
   document.body.style.userSelect = 'none'
@@ -153,11 +221,11 @@ const startDrag = (e: MouseEvent) => {
 // 拖拽中
 const onDrag = (e: MouseEvent) => {
   if (!isDragging.value) return
-  
+
   e.preventDefault()
   const newWidth = e.clientX
   const maxChatWidth = window.innerWidth - minPreviewWidth // 确保预览区域有最小宽度
-  
+
   // 限制在最小和最大宽度之间
   if (newWidth >= minChatWidth && newWidth <= maxChatWidth) {
     chatWidth.value = newWidth
@@ -173,7 +241,7 @@ const stopDrag = () => {
   isDragging.value = false
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
-  
+
   // 恢复默认样式
   document.body.style.cursor = ''
   document.body.style.userSelect = ''
@@ -244,6 +312,14 @@ const handleDeleteApp = async () => {
   })
 }
 
+/** 确保 details 代码块默认展开并可见 */
+const ensureCodeDetailsOpen = () => {
+  document.querySelectorAll('details.md-code-details').forEach((el) => {
+    const d = el as HTMLDetailsElement
+    if (!d.open) d.open = true
+  })
+}
+
 // SSE流式对话
 const generateCode = async (promptMessage: string) => {
   if (!promptMessage.trim()) return
@@ -292,7 +368,7 @@ const generateCode = async (promptMessage: string) => {
       fullContent += pendingDelta
       pendingDelta = ''
       aiMsg.content = fullContent
-      nextTick().then(scrollToBottom)
+      nextTick().then(() => { ensureCodeDetailsOpen(); scrollToBottom() })
     }
     const scheduleCommit = () => {
       if (rafId !== null) return
@@ -516,10 +592,19 @@ const loadChatHistory = async (isInitial: boolean = false) => {
   if (historyLoading.value) return
   historyLoading.value = true
   try {
+    const lastCreateTimeParam: number | undefined = isInitial ? undefined : (() => {
+      const v = lastCursorCreateTime.value
+      if (!v) return undefined
+      const n = Number(v)
+      if (!Number.isNaN(n)) return n
+      const t = Date.parse(v)
+      return Number.isNaN(t) ? undefined : t
+    })()
+
     const res = await listAppChatHistory({
       appId: appId.value,
       pageSize: historyPageSize,
-      lastCreateTime: isInitial ? undefined : lastCursorCreateTime.value,
+      lastCreateTime: (lastCreateTimeParam === undefined ? undefined : String(lastCreateTimeParam)),
     })
     if (res.data.code === 0 && res.data.data) {
       const records = res.data.data.records || []
@@ -613,6 +698,7 @@ const sendMessage = async () => {
 
   // 滚动到底部
   await nextTick()
+  ensureCodeDetailsOpen()
   scrollToBottom()
 
   // 清除选中元素并退出编辑模式
@@ -813,7 +899,7 @@ onMounted(async () => {
   await loadAppInfo()
   await loadChatHistory(true)
   await tryAutoSendInitPrompt()
-  
+
   // 添加窗口大小变化监听
   window.addEventListener('resize', handleResize)
 })
@@ -1193,11 +1279,11 @@ onUnmounted(() => {
 
 .messages-container {
   flex: 1;
-  padding: 16px;
+  padding: 10px 14px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 6px;
 }
 
 .load-more-bar {
@@ -1207,10 +1293,10 @@ onUnmounted(() => {
 }
 
 .message {
-  margin-bottom: 12px;
+  margin-bottom: 6px;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 6px;
 }
 
 .user-message { justify-content: flex-end; }
@@ -1237,25 +1323,201 @@ onUnmounted(() => {
 
 .message-content {
   max-width: calc(80% - 40px);
-  padding: 10px 14px;
-  border-radius: 12px;
+  padding: 6px 10px;
+  border-radius: 10px;
   position: relative;
   word-wrap: break-word;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
 }
 
-.user-message .message-content { background: #1890ff; color: white; margin-left: auto; }
-.ai-message .message-content { background: #f0f0f0; color: #333; }
+.user-message .message-content {
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  color: white;
+  margin-left: auto;
+}
+
+.ai-message .message-content {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  color: #333;
+  border: 1px solid #e1e4e8;
+}
+
+.user-message .message-content:hover {
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.ai-message .message-content:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
 
 .message-text {
-  line-height: 1.5;
+  line-height: 1.16; /* 更紧凑 */
   word-wrap: break-word;
   white-space: pre-wrap;
+}
+
+/* 全局重置markdown元素间距 - 完全紧贴 */
+.message-text > * {
+  margin: 0 !important;
+}
+
+/* 段落和代码块之间完全无间距 */
+.message-text > .md-paragraph + .collapsible-code-block {
+  margin-top: 0 !important;
+}
+
+.message-text > .collapsible-code-block + .md-paragraph {
+  margin-top: 0 !important;
+}
+
+/* 代码块之间完全无间距 */
+.message-text > .collapsible-code-block + .collapsible-code-block {
+  margin-top: 0 !important;
+}
+
+/* 确保所有元素都紧贴 */
+.message-text .collapsible-code-block {
+  margin: 0 !important;
+  display: block;
+}
+
+/* 优化markdown渲染样式 - 紧凑布局 */
+.message-text {
+  font-size: 14px;
+}
+
+/* 标题样式 - 紧凑间距 */
+.message-text .md-heading {
+  margin: 4px 0 2px 0 !important;
+  color: #24292e;
+  font-weight: 600;
+  line-height: 1.28;
+}
+
+.message-text .md-h1 { font-size: 18px; }
+.message-text .md-h2 { font-size: 16px; }
+.message-text .md-h3 { font-size: 15px; }
+.message-text .md-h4 { font-size: 14px; }
+.message-text .md-h5 { font-size: 13px; }
+.message-text .md-h6 { font-size: 12px; }
+
+/* 段落样式 - 完全无间距 */
+.message-text .md-paragraph {
+  margin: 0 !important;
+  line-height: 1.12; /* 段落再收紧 */
+  padding: 0;
+}
+
+/* 列表样式 - 紧凑 */
+.message-text ul,
+.message-text ol {
+  margin: 0 !important;
+  padding-left: 12px; /* 列表再缩进 */
+}
+
+.message-text li {
+  margin: 0;
+  line-height: 1.06; /* 列表项更紧凑 */
+}
+
+.message-text li p {
+  margin: 0 !important;
+  display: inline;
+}
+
+/* 引用块样式 */
+.message-text blockquote {
+  margin: 2px 0 !important;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.03);
+  border-left: 3px solid #0366d6;
+  border-radius: 0 3px 3px 0;
+}
+
+.message-text blockquote p {
+  margin: 0 !important;
+}
+
+/* 表格样式 */
+.message-text table {
+  border-collapse: collapse;
+  margin: 6px 0 !important;
+  width: 100%;
+  font-size: 13px;
+}
+
+.message-text th,
+.message-text td {
+  border: 1px solid #e1e4e8;
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.message-text th {
+  background: #f6f8fa;
+  font-weight: 600;
+}
+
+/* 行内代码样式 */
+.message-text code:not(.language-html):not(.language-css):not(.language-js):not(.language-javascript):not(.language-python):not(.language-java):not(.language-cpp):not(.language-c) {
+  background: #f6f8fa;
+  border: 1px solid #e1e4e8;
+  border-radius: 3px;
+  padding: 1px 3px;
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+  font-size: 12px;
+  color: #e36209;
+}
+
+/* 水平分割线 */
+.message-text hr {
+  margin: 4px 0 !important;
+  border: none;
+  border-top: 1px solid #e1e4e8;
+}
+
+/* 强调文本 */
+.message-text strong {
+  font-weight: 600;
+  color: #24292e;
+}
+
+.message-text em {
+  font-style: italic;
+  color: #586069;
+}
+
+/* 用户消息中的markdown样式 */
+.user-message .message-text .md-heading {
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.user-message .message-text code:not(.language-html):not(.language-css):not(.language-js):not(.language-javascript):not(.language-python):not(.language-java):not(.language-cpp):not(.language-c) {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.95);
+}
+
+.user-message .message-text blockquote {
+  background: rgba(255, 255, 255, 0.1);
+  border-left-color: rgba(255, 255, 255, 0.6);
+}
+
+.user-message .message-text strong {
+  color: white;
+}
+
+.user-message .message-text em {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .message-time {
   font-size: 11px;
   color: #999;
-  margin-top: 4px;
+  margin-top: 2px;
   opacity: 0.8;
 }
 
@@ -1569,12 +1831,12 @@ onUnmounted(() => {
   .chat-section {
     min-width: 280px;
   }
-  
+
   /* 调整最小宽度以适应较小屏幕 */
   .resize-handle {
     width: 6px;
   }
-  
+
   .resize-handle:hover,
   .resize-handle.dragging {
     width: 8px;
@@ -1586,22 +1848,22 @@ onUnmounted(() => {
     height: calc(100vh - 64px - 65px);
     width: 100vw;
   }
-  
+
   .app-info-bar {
     padding: 8px 16px;
   }
-  
+
   .app-name-btn {
     font-size: 14px;
   }
-  
+
   .gen-type-tag {
     font-size: 11px;
     height: 22px;
     line-height: 20px;
     padding: 0 6px;
   }
-  
+
   .chat-section {
     min-width: 250px;
   }
@@ -1612,34 +1874,34 @@ onUnmounted(() => {
     height: calc(100vh - 64px - 65px);
     width: 100vw;
   }
-  
+
   .app-info-bar {
     padding: 8px 12px;
     flex-direction: column;
     gap: 8px;
     align-items: flex-start;
   }
-  
+
   .app-info-right {
     width: 100%;
     justify-content: flex-end;
   }
-  
+
   .main-content {
     flex-direction: column;
   }
-  
+
   .chat-section {
     width: 100% !important;
     height: 50%;
     border-right: none;
     border-bottom: 1px solid #e8e8e8;
   }
-  
+
   .resize-handle {
     display: none;
   }
-  
+
   .preview-section {
     height: 50%;
   }
