@@ -1206,7 +1206,7 @@ onUnmounted(() => {
 
 <style scoped>
 .app-chat-page {
-  height: calc(100vh - 64px - 65px); /* 减去 header 和 footer 的高度 */
+  height: calc(100vh - 64px); /* 仅减去 header，高度覆盖剩余区域；页脚需滚动才可见 */
   display: flex;
   flex-direction: column;
   background: #f5f5f5;
@@ -1845,7 +1845,7 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .app-chat-page {
-    height: calc(100vh - 64px - 65px);
+    height: calc(100vh - 64px);
     width: 100vw;
   }
 
@@ -1871,7 +1871,7 @@ onUnmounted(() => {
 
 @media (max-width: 576px) {
   .app-chat-page {
-    height: calc(100vh - 64px - 65px);
+    height: calc(100vh - 64px);
     width: 100vw;
   }
 
