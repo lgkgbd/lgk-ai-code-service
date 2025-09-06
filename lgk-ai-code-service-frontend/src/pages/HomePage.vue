@@ -2,6 +2,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
+import {getDeployUrl} from '@/constants/urls.ts'
 import {
   addApp,
   listMyAppVoByPage,
@@ -35,15 +36,15 @@ const startInputDrag = (e: MouseEvent) => {
 // 拖拽中（输入框高度）
 const onInputDrag = (e: MouseEvent) => {
   if (!isInputDragging.value) return
-  
+
   // 获取输入框元素
   const inputWrapper = document.querySelector('.input-wrapper')
   if (!inputWrapper) return
-  
+
   // 计算新高度
   const wrapperRect = inputWrapper.getBoundingClientRect()
   const newHeight = e.clientY - wrapperRect.top
-  
+
   // 应用高度限制
   if (newHeight >= minInputHeight && newHeight <= maxInputHeight) {
     inputHeight.value = newHeight
@@ -218,7 +219,7 @@ const viewAppChat = (appId: string) => {
 // 查看应用作品
 const viewAppWork = (app: any) => {
   if (app?.deployKey) {
-    const deployUrl = `http://localhost/${app.deployKey}`
+    const deployUrl =  getDeployUrl(app.deployKey)
     window.open(deployUrl, '_blank')
     return
   }
@@ -292,7 +293,7 @@ onMounted(() => {
               >
                 <span class="submit-icon">↑</span>
               </a-button>
-              
+
 
           </div>
         </div>
@@ -594,7 +595,7 @@ onMounted(() => {
     flex: 1;
     position: relative;
   }
-  
+
   /* 拖拽时禁用文本选择 */
   .input-section.dragging {
     user-select: none;
