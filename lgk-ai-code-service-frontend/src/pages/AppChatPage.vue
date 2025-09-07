@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { message, Modal, Alert } from 'ant-design-vue'
+import { Modal, Alert } from 'ant-design-vue'
 import { showSuccess, showError } from '@/utils/message'
 import {
   Html5Outlined,
@@ -270,12 +270,12 @@ const loadAppInfo = async () => {
       // 检查权限
       checkPermissions()
     } else {
-      message.error('获取应用信息失败')
+      showError('获取应用信息失败')
       router.push('/')
     }
   } catch (error) {
     console.error('获取应用信息失败:', error)
-    message.error('获取应用信息失败')
+    showError('获取应用信息失败')
     router.push('/')
   } finally {
     loading.value = false
@@ -300,14 +300,14 @@ const handleDeleteApp = async () => {
       try {
         const res = await deleteApp({ id: appInfo.value!.id })
         if (res.data.code === 0) {
-          message.success('删除成功')
+          showSuccess('删除成功')
           router.push('/')
         } else {
-          message.error(res.data.message || '删除失败')
+          showError(res.data.message || '删除失败')
         }
       } catch (error) {
         console.error('删除应用失败:', error)
-        message.error('删除失败')
+        showError('删除失败')
       }
     },
   })
@@ -409,7 +409,7 @@ const generateCode = async (promptMessage: string) => {
         // 显示具体的错误信息
         const errorMessage = errorData.message || '生成过程中出现错误'
         aiMsg.content = `❌ ${errorMessage}`
-        message.error(errorMessage)
+        showError(errorMessage)
 
         endedByES = true
         isGenerating.value = false
@@ -430,7 +430,7 @@ const generateCode = async (promptMessage: string) => {
         setTimeout(async () => {
           await refreshAfterAIFinish()
         }, 1000)
-        message.success('代码生成完成')
+        showSuccess('代码生成完成')
       } else {
         handleError(new Error('生成失败，无内容'), aiMsg)
       }
@@ -469,7 +469,7 @@ const generateCode = async (promptMessage: string) => {
                 // 显示具体的错误信息
                 const errorMessage = errorData.message || '生成过程中出现错误'
                 aiMsg.content = `❌ ${errorMessage}`
-                message.error(errorMessage)
+                showError(errorMessage)
 
                 isGenerating.value = false
                 streamOrderGuard.value.active = false
@@ -486,7 +486,7 @@ const generateCode = async (promptMessage: string) => {
               isGenerating.value = false
               if (fullContent.trim()) {
                 setTimeout(async () => { await refreshAfterAIFinish() }, 1000)
-                message.success('代码生成完成')
+                showSuccess('代码生成完成')
               } else {
                 handleError(new Error('生成失败，无内容'), aiMsg)
               }
@@ -556,7 +556,7 @@ const handleError = (error: unknown, aiMsg?: ChatMessage) => {
     aiMsg.content = '抱歉，生成过程中出现了错误，请重试。'
   }
 
-  message.error('生成失败，请重试')
+  showError('生成失败，请重试')
   isGenerating.value = false
   streamOrderGuard.value.active = false
 }
@@ -655,11 +655,11 @@ const loadChatHistory = async (isInitial: boolean = false) => {
         updatePreview()
       }
     } else {
-      message.error('加载对话历史失败')
+      showError('加载对话历史失败')
     }
   } catch (error) {
     console.error('加载对话历史失败:', error)
-    message.error('加载对话历史失败')
+    showError('加载对话历史失败')
   } finally {
     historyLoading.value = false
   }
@@ -730,15 +730,13 @@ const handleDeploy = async () => {
   try {
     const res = await deployApp({ appId: appInfo.value.id })
     if (res.data.code === 0 && res.data.data) {
-      Modal.success({
-        title: '部署成功',
-        content: `您的应用已成功部署，访问地址：${res.data.data}`,
-        onOk: () => {
-          // 可以复制链接到剪贴板
-          navigator.clipboard.writeText(String(res.data.data))
-          showSuccess('链接已复制到剪贴板')
-        }
-      })
+      const url = String(res.data.data)
+      try {
+        await navigator.clipboard.writeText(url)
+        showSuccess(`部署成功：${url}（已复制）`)
+      } catch {
+        showSuccess(`部署成功：${url}`)
+      }
     } else {
       showError(res.data.message || '部署失败')
     }
@@ -763,13 +761,13 @@ const saveAppName = async () => {
     if (res.data.code === 0) {
       appInfo.value.appName = editAppName.value.trim()
       isEditing.value = false
-      message.success('应用名称更新成功')
+      showSuccess('应用名称更新成功')
     } else {
-      message.error(res.data.message || '更新失败')
+      showError(res.data.message || '更新失败')
     }
   } catch (error) {
     console.error('更新应用名称失败:', error)
-    message.error('更新失败')
+    showError('更新失败')
   } finally {
     saving.value = false
   }
@@ -898,7 +896,7 @@ const getSelectedElementPrompt = () => {
 onMounted(async () => {
   appId.value = route.params.id as string
   if (!appId.value) {
-    message.error('应用ID无效')
+    showError('应用ID无效')
     router.push('/')
     return
   }
