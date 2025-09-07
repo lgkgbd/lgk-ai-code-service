@@ -7,7 +7,6 @@ import cn.hutool.core.util.StrUtil;
 import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
 import io.github.bonigarcia.wdm.WebDriverManager;
-import jakarta.annotation.PreDestroy;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.OutputType;
@@ -59,8 +58,17 @@ public class WebScreenshotUtils {
      */
     private static WebDriver initChromeDriver(int width, int height) {
         try {
-            // 自动管理 ChromeDriver
-            WebDriverManager.chromedriver().setup();
+
+            String os = System.getProperty("os.name").toLowerCase();
+            if (os.contains("linux")) {
+                // centos 环境要用自己下载的
+                // 手动管理 ChromeDriver
+                System.setProperty("webdriver.chrome.driver", "/usr/local/bin/chromedriver");
+            } else {
+                // 自动管理 ChromeDriver
+                WebDriverManager.chromedriver().setup();
+            }
+
             // 配置 Chrome 选项
             ChromeOptions options = new ChromeOptions();
             // 无头模式

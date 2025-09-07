@@ -30,7 +30,7 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import '@/assets/collapsible-code.css'
-import { getStaticPreviewUrl } from '../constants/urls'
+import { getStaticPreviewUrl, API_BASE_URL } from '../constants/urls'
 import { getCodeGenTypeConfig } from '@/constants/codeGenType'
 import { VisualEditor, type ElementInfo } from '@/utils/visualEditor'
 import { DebugHelper } from '@/utils/debugHelper'
@@ -355,7 +355,7 @@ const generateCode = async (promptMessage: string) => {
       message: promptMessage,
     })
 
-    const url = `http://localhost:8123/api/app/chat/gen/code?${params}`
+    const url = `${API_BASE_URL}/app/chat/gen/code?${params}`
 
     // 首选原生 EventSource（支持 withCredentials），避免 fetch 在部分环境的缓冲
     let endedByES = false
@@ -781,7 +781,7 @@ const handleDownloadAppCode = async () => {
 
   try {
     // 直接使用fetch下载ZIP文件，避免axios的响应拦截器处理
-    const response = await fetch(`http://localhost:8123/api/app/download/${appInfo.value.id}`, {
+    const response = await fetch(`${API_BASE_URL}/app/download/${appInfo.value.id}`, {
       method: 'GET',
       credentials: 'include',
     })

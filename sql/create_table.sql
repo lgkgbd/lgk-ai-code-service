@@ -50,7 +50,7 @@ create table if not exists app
 
 
 -- 对话历史表
-create table chat_history
+create table if not exists chat_history
 (
     id          bigint auto_increment comment 'id' primary key,
     message     text                               not null comment '消息',

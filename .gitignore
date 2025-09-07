@@ -36,6 +36,7 @@ build/
 
 ### CUSTOM ###
 application-local.yml
+application-prod.yml
 
 ### 测试文件 ###
 tmp
