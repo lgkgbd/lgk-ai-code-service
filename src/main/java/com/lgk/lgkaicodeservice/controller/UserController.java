@@ -22,7 +22,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import com.lgk.lgkaicodeservice.model.entity.User;
 import com.lgk.lgkaicodeservice.service.UserService;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户 控制层。
@@ -165,6 +168,34 @@ public class UserController {
         return ResultUtils.success(userVOPage);
     }
 
+    /**
+     * 添加用户签到记录
+     *
+     * @param request
+     * @return 当前是否已签到成功
+     */
+    @PostMapping("/add/sign_in")
+    public BaseResponse<Boolean> addUserSignIn(HttpServletRequest request) {
+        // 必须要登录才能签到
+        User loginUser = userService.getLoginUser(request);
+        boolean result = userService.addUserSignIn(loginUser.getId());
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 获取用户签到记录
+     *
+     * @param year    年份（为空表示当前年份）
+     * @param request
+     * @return 签到记录映射
+     */
+    @GetMapping("/get/sign_in")
+    public BaseResponse<List<Integer>> getUserSignInRecord(Integer year, HttpServletRequest request) {
+        // 必须要登录才能获取
+        User loginUser = userService.getLoginUser(request);
+        List<Integer> userSignInRecord = userService.getUserSignInRecord(loginUser.getId(), year);
+        return ResultUtils.success(userSignInRecord);
+    }
 
 
 }

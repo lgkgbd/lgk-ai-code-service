@@ -8,7 +8,9 @@ import com.mybatisflex.core.service.IService;
 import com.lgk.lgkaicodeservice.model.entity.User;
 import jakarta.servlet.http.HttpServletRequest;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 用户 服务层。
@@ -66,4 +68,24 @@ public interface UserService extends IService<User> {
     QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest);
 
     String getEncryptPassword(String userPassword);
+
+
+    /**
+     * 添加用户签到记录
+     *
+     * @param userId 用户 id
+     * @return 当前是否已签到成功
+     */
+    boolean addUserSignIn(long userId);
+
+    /**
+     * 获取用户某个年份的签到记录
+     *
+     * @param userId 用户 id
+     * @param year   年份（为空表示当前年份）
+     * @return 签到记录映射
+     */
+    List<Integer> getUserSignInRecord(long userId, Integer year);
+
+
 }
