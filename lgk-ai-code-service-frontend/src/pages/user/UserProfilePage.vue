@@ -24,6 +24,32 @@
           <span class="label">创建时间</span>
           <span class="value">{{ loginUser.createTime || '-' }}</span>
         </div>
+
+        <!-- 年度签到格子图 -->
+        <div class="calendar-card">
+          <div class="calendar-title">{{ currentYear }} 年签到记录</div>
+          <div class="calendar-body">
+            <div class="weekday-labels">
+              <span v-for="(w, i) in ['日','一','二','三','四','五','六']" :key="i" class="weekday">{{ w }}</span>
+            </div>
+            <div class="calendar-scroll">
+              <div class="calendar-months">
+                <div class="month-col" v-for="(label, i) in monthLabels" :key="i">{{ label }}</div>
+              </div>
+              <div class="calendar-heatmap">
+                <div class="week" v-for="(col, ci) in weeks" :key="ci">
+                  <div
+                    v-for="(d, di) in col"
+                    :key="di"
+                    class="day-cell"
+                    :class="{ active: d && d.signed, empty: !d }"
+                    :title="d ? d.dateStr : ''"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -32,11 +58,103 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
-import { onMounted } from 'vue'
-import { getMyProfile } from '@/api/userController.ts'
+import { onMounted, ref } from 'vue'
+import { getMyProfile, addUserSignIn, getUserSignInRecord } from '@/api/userController.ts'
 
 const loginUserStore = useLoginUserStore()
 const { loginUser } = storeToRefs(loginUserStore)
+
+const currentYear = new Date().getFullYear()
+
+type DayCell = {
+  date: Date
+  dateStr: string
+  dayOfYear: number
+  signed: boolean
+}
+const weeks = ref<Array<Array<DayCell | null>>>([])
+const monthLabels = ref<string[]>([])
+
+function dayOfYear(date: Date): number {
+  const start = new Date(date.getFullYear(), 0, 0)
+  const diff = date.getTime() - start.getTime()
+  const oneDay = 1000 * 60 * 60 * 24
+  return Math.floor(diff / oneDay)
+}
+
+function formatDateKey(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}${m}${d}`
+}
+
+async function ensureSignInToday() {
+  const userId = (loginUser.value as any)?.id
+  if (!userId) return
+  const today = new Date()
+  const key = `sign_in_${formatDateKey(today)}_${userId}`
+  if (localStorage.getItem(key)) return
+  try {
+    const res = await addUserSignIn()
+    if (res.data?.code === 0 && res.data?.data) {
+      localStorage.setItem(key, '1')
+    }
+  } catch {
+    // 忽略失败，避免影响页面渲染
+  }
+}
+
+async function fetchSignInRecords() {
+  try {
+    const res = await getUserSignInRecord({ year: currentYear })
+    const arr = Array.isArray(res.data?.data) ? (res.data.data as number[]) : []
+    buildWeeksFromSignedDays(arr)
+  } catch {
+    buildWeeksFromSignedDays([])
+  }
+}
+
+function buildWeeksFromSignedDays(signedArr: number[]) {
+  weeks.value = []
+  const signedSet = new Set(signedArr)
+  const start = new Date(currentYear, 0, 1)
+  let week: Array<DayCell | null> = []
+  // 前置占位，使第一列与周对齐（周日=0）
+  for (let i = 0; i < start.getDay(); i++) {
+    week.push(null)
+  }
+  const d = new Date(currentYear, 0, 1)
+  while (d.getFullYear() === currentYear) {
+    const doy = dayOfYear(d)
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate()
+    ).padStart(2, '0')}`
+    week.push({
+      date: new Date(d),
+      dateStr,
+      dayOfYear: doy,
+      signed: signedSet.has(doy),
+    })
+    if (week.length === 7) {
+      weeks.value.push(week)
+      week = []
+    }
+    d.setDate(d.getDate() + 1)
+  }
+  if (week.length > 0) {
+    while (week.length < 7) week.push(null)
+    weeks.value.push(week)
+  }
+  // 生成月份标签：以每列（周）内的最大月份为准，检测与上一列是否变化
+  monthLabels.value = weeks.value.map((col, idx) => {
+    const months = col.filter(c => !!c).map(c => (c as DayCell).date.getMonth())
+    const prevMonths = idx > 0 ? weeks.value[idx - 1].filter(c => !!c).map(c => (c as DayCell).date.getMonth()) : []
+    const curM = months.length ? Math.max(...months) : null
+    const prevM = prevMonths.length ? Math.max(...prevMonths) : null
+    return curM !== null && curM !== prevM ? `${curM + 1}月` : ''
+  })
+}
 
 onMounted(async () => {
   // 尝试刷新个人信息（后端若已在 cookie 会返回当前登录用户）
@@ -44,6 +162,10 @@ onMounted(async () => {
   if (res.data.code === 0 && res.data.data) {
     loginUserStore.setLoginUser(res.data.data)
   }
+  // 自动签到（若今日未签）
+  await ensureSignInToday()
+  // 拉取今年签到记录并渲染热力图
+  await fetchSignInRecords()
 })
 </script>
 
@@ -97,4 +219,81 @@ onMounted(async () => {
   color: #333;
   word-break: break-all;
 }
+.calendar-card {
+  margin-top: 16px;
+  padding: 12px 12px 12px 16px; /* 增加左侧与整体上下内边距 */
+}
+
+.calendar-title {
+  font-weight: 600;
+  margin-bottom: 12px; /* 拉开与月份行的距离 */
+  color: #333;
+}
+
+.calendar-heatmap {
+  display: flex;
+  gap: 3px;
+  padding: 6px 0;
+}
+
+.week {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 0 0 auto; /* 固定每周列宽度，防止收缩导致与月份列错位 */
+}
+
+.day-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  background: #ebedf0;
+}
+
+.day-cell.active {
+  background: #52c41a;
+}
+
+.day-cell.empty {
+  background: transparent;
+}
+.calendar-months {
+  display: flex;
+  gap: 3px;
+  height: 18px;
+  margin-bottom: 8px; /* 拉开与格子图的距离 */
+  font-size: 12px;
+  color: #666;
+}
+
+.month-col {
+  width: 12px; /* 与 day-cell 宽度一致 */
+  flex: 0 0 12px; /* 固定月份列宽度，确保与周列逐列对齐 */
+  text-align: center;
+}
+
+.calendar-body {
+  display: flex;
+  gap: 12px; /* 增大星期标签与格子图之间的间距 */
+}
+
+.weekday-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 24px;
+  color: #999;
+  font-size: 12px;
+  margin-top: 32px; /* 与月份行(18) + 下边距(8) + 方格上内边距(6) 对齐 */
+}
+
+.weekday {
+  height: 12px;
+  line-height: 12px;
+}
+
+.calendar-scroll {
+  overflow-x: auto;
+}
+
 </style>
