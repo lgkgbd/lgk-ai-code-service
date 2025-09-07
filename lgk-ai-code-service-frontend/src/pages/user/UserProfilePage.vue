@@ -18,7 +18,11 @@
         </div>
         <div class="item">
           <span class="label">角色</span>
-          <span class="value">{{ loginUser.userRole || '-' }}</span>
+          <span class="value">
+            <a-tag :color="loginUser.userRole === 'admin' ? 'green' : 'blue'">
+              {{ loginUser.userRole === 'admin' ? '管理员' : '普通用户' }}
+            </a-tag>
+          </span>
         </div>
         <div class="item">
           <span class="label">创建时间</span>

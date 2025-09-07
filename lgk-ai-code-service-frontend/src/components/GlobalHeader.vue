@@ -23,7 +23,7 @@
       <div class="right">
         <div class="user-login-status">
           <div v-if="loginUserStore.loginUser.id" class="user-info">
-            <a-dropdown>
+            <a-dropdown overlayClassName="user-dropdown-overlay">
               <a-space class="user-dropdown">
                 <a-avatar :src="loginUserStore.loginUser.userAvatar" class="user-avatar">
                   {{ loginUserStore.loginUser.userName?.charAt(0)?.toUpperCase() }}
@@ -37,9 +37,9 @@
                     <UserOutlined />
                     <span>个人主页</span>
                   </a-menu-item>
-                  <a-menu-item @click="doLogout" class="logout-item">
+                  <a-menu-item @click="doLogout" class="logout-item" :style="{ color: '#ff4d4f' }">
                     <LogoutOutlined />
-                    <span>退出登录</span>
+                    <span style="color: #ff4d4f">退出登录</span>
                   </a-menu-item>
                 </a-menu>
               </template>
@@ -269,6 +269,20 @@ function onMenuItemClick(path: string) {
   display: flex;
   align-items: center;
   gap: 8px;
+  color: #ff4d4f; /* 文本改为红色 */
+}
+
+/* 图标与内部文本保持红色（防止被 AntD 覆盖） */
+:deep(.user-menu .ant-menu-item.logout-item .anticon),
+:deep(.user-menu .ant-menu-item.logout-item span) {
+  color: #ff4d4f !important;
+}
+
+/* 悬停时依然保持红色 */
+:deep(.user-menu .ant-menu-item.logout-item:hover),
+:deep(.user-menu .ant-menu-item.logout-item:hover .anticon),
+:deep(.user-menu .ant-menu-item.logout-item:hover span) {
+  color: #ff4d4f !important;
 }
 
 .profile-item {
@@ -322,4 +336,35 @@ function onMenuItemClick(path: string) {
     justify-content: space-between;
   }
 }
+/* 使退出登录在 Dropdown overlay 中强制为红色（包含图标与文字，悬停亦保持） */
+:deep(.user-menu .ant-menu-item.logout-item) {
+  color: #ff4d4f !important;
+}
+:deep(.user-menu .ant-menu-item.logout-item .anticon),
+:deep(.user-menu .ant-menu-item.logout-item .anticon svg),
+:deep(.user-menu .ant-menu-item.logout-item span) {
+  color: #ff4d4f !important;
+}
+:deep(.user-menu .ant-menu-item.logout-item:hover),
+:deep(.user-menu .ant-menu-item.logout-item:hover .anticon),
+:deep(.user-menu .ant-menu-item.logout-item:hover span) {
+  color: #ff4d4f !important;
+}
+/* 覆盖渲染到 body 的下拉菜单颜色（确保图标与文字为红色） */
+:deep(.user-dropdown-overlay .ant-menu-item.logout-item),
+:deep(.user-dropdown-overlay .ant-menu-item.logout-item .anticon),
+:deep(.user-dropdown-overlay .ant-menu-item.logout-item .anticon svg),
+:deep(.user-dropdown-overlay .ant-menu-item.logout-item span),
+:deep(.user-dropdown-overlay .ant-dropdown-menu-item.logout-item),
+:deep(.user-dropdown-overlay .ant-dropdown-menu-item.logout-item .anticon),
+:deep(.user-dropdown-overlay .ant-dropdown-menu-item.logout-item .anticon svg),
+:deep(.user-dropdown-overlay .ant-dropdown-menu-item.logout-item .ant-dropdown-menu-title-content) {
+  color: #ff4d4f !important;
+  fill: #ff4d4f !important;
+}
+:deep(.user-dropdown-overlay .ant-menu-item.logout-item:hover),
+:deep(.user-dropdown-overlay .ant-dropdown-menu-item.logout-item:hover) {
+  color: #ff4d4f !important;
+}
+
 </style>
