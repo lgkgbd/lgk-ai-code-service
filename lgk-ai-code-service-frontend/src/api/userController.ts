@@ -14,6 +14,14 @@ export async function addUser(body: API.UserAddRequest, options?: { [key: string
   })
 }
 
+/** 此处后端没有提供注释 POST /user/add/sign_in */
+export async function addUserSignIn(options?: { [key: string]: any }) {
+  return request<API.BaseResponseBoolean>('/user/add/sign_in', {
+    method: 'POST',
+    ...(options || {}),
+  })
+}
+
 /** 此处后端没有提供注释 POST /user/delete */
 export async function deleteUser(body: API.DeleteRequest, options?: { [key: string]: any }) {
   return request<API.BaseResponseBoolean>('/user/delete', {
@@ -45,6 +53,29 @@ export async function getUserById(
 export async function getLoginUser(options?: { [key: string]: any }) {
   return request<API.BaseResponseLoginUserVO>('/user/get/login', {
     method: 'GET',
+    ...(options || {}),
+  })
+}
+
+/** 查看个人主页（别名） GET /user/get/login */
+export async function getMyProfile(options?: { [key: string]: any }) {
+  return request<API.BaseResponseLoginUserVO>('/user/get/login', {
+    method: 'GET',
+    ...(options || {}),
+  })
+}
+
+/** 此处后端没有提供注释 GET /user/get/sign_in */
+export async function getUserSignInRecord(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getUserSignInRecordParams,
+  options?: { [key: string]: any }
+) {
+  return request<API.BaseResponseListInteger>('/user/get/sign_in', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
     ...(options || {}),
   })
 }

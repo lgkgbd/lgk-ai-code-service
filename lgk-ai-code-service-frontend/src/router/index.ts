@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '@/pages/HomePage.vue'
 import UserLoginPage from '@/pages/user/UserLoginPage.vue'
 import UserRegisterPage from '@/pages/user/UserRegisterPage.vue'
+import UserProfilePage from '@/pages/user/UserProfilePage.vue'
 import UserManagePage from '@/pages/admin/UserManagePage.vue'
 import AppManagePage from '@/pages/admin/AppManagePage.vue'
 import ChatManagePage from '@/pages/admin/ChatManagePage.vue'
@@ -37,6 +38,14 @@ const router = createRouter({
       component: UserRegisterPage,
       meta: {
         access: ACCESS_ENUM.NOT_LOGIN,
+      },
+    },
+    {
+      path: '/user/profile',
+      name: '用户主页',
+      component: UserProfilePage,
+      meta: {
+        access: ACCESS_ENUM.USER,
       },
     },
     {

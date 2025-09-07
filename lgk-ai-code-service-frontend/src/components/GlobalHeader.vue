@@ -33,6 +33,10 @@
               </a-space>
               <template #overlay>
                 <a-menu class="user-menu">
+                  <a-menu-item @click="goProfile" class="profile-item">
+                    <UserOutlined />
+                    <span>个人主页</span>
+                  </a-menu-item>
                   <a-menu-item @click="doLogout" class="logout-item">
                     <LogoutOutlined />
                     <span>退出登录</span>
@@ -55,7 +59,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
-import { LogoutOutlined } from '@ant-design/icons-vue'
+import { LogoutOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { userLogout } from '@/api/userController.ts'
 import { message } from 'ant-design-vue'
 import checkAccess from '@/access/checkAccess.ts'
@@ -74,6 +78,11 @@ const props = defineProps<{
 const loginUserStore = useLoginUserStore()
 const route = useRoute()
 const router = useRouter()
+
+// 前往个人主页
+const goProfile = () => {
+  router.push('/user/profile')
+}
 
 // 过滤有权限的菜单项
 const filteredMenuItems = computed(() => {
@@ -257,6 +266,12 @@ function onMenuItemClick(path: string) {
 }
 
 .logout-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.profile-item {
   display: flex;
   align-items: center;
   gap: 8px;
