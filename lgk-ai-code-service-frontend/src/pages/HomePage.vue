@@ -9,6 +9,7 @@ import {
   listGoodAppVoByPage
 } from '@/api/appController'
 import { useLoginUserStore } from '@/stores/loginUser'
+import { addUserSignIn } from '@/api/userController.ts'
 import { getCodeGenTypeConfig } from '@/constants/codeGenType'
 import homeLogo from '@/assets/homeLogo.png'
 
@@ -249,7 +250,38 @@ const formatTime = (timeStr: string) => {
   }
 }
 
-onMounted(() => {
+/**
+ * 签到：进入首页自动签到（仅在已登录且当日未签的情况下触发）
+ * 使用 localStorage key: sign_in_YYYYMMDD_{userId} 进行去重
+ */
+const formatDateKey = (date: Date) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}${m}${d}`
+}
+
+const ensureSignInToday = async () => {
+  const userId = (loginUserStore.loginUser as any)?.id
+  if (!userId) return
+  const key = `sign_in_${formatDateKey(new Date())}_${userId}`
+  if (localStorage.getItem(key)) return
+  try {
+    const res = await addUserSignIn()
+    if (res.data?.code === 0 && res.data?.data) {
+      localStorage.setItem(key, '1')
+    }
+  } catch {
+    // 忽略失败，避免影响首页渲染
+  }
+}
+
+onMounted(async () => {
+  // 确保已获取到登录用户
+  if (!loginUserStore.loginUser?.id) {
+    await (loginUserStore as any).fetchLoginUser?.()
+  }
+  await ensureSignInToday()
   loadMyApps()
   loadFeaturedApps()
 })

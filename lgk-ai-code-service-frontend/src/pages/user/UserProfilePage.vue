@@ -63,7 +63,7 @@
 import { storeToRefs } from 'pinia'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { onMounted, ref } from 'vue'
-import { getMyProfile, addUserSignIn, getUserSignInRecord } from '@/api/userController.ts'
+import { getMyProfile, getUserSignInRecord } from '@/api/userController.ts'
 
 const loginUserStore = useLoginUserStore()
 const { loginUser } = storeToRefs(loginUserStore)
@@ -86,28 +86,9 @@ function dayOfYear(date: Date): number {
   return Math.floor(diff / oneDay)
 }
 
-function formatDateKey(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}${m}${d}`
-}
 
-async function ensureSignInToday() {
-  const userId = (loginUser.value as any)?.id
-  if (!userId) return
-  const today = new Date()
-  const key = `sign_in_${formatDateKey(today)}_${userId}`
-  if (localStorage.getItem(key)) return
-  try {
-    const res = await addUserSignIn()
-    if (res.data?.code === 0 && res.data?.data) {
-      localStorage.setItem(key, '1')
-    }
-  } catch {
-    // 忽略失败，避免影响页面渲染
-  }
-}
+
+
 
 async function fetchSignInRecords() {
   try {
@@ -166,8 +147,6 @@ onMounted(async () => {
   if (res.data.code === 0 && res.data.data) {
     loginUserStore.setLoginUser(res.data.data)
   }
-  // 自动签到（若今日未签）
-  await ensureSignInToday()
   // 拉取今年签到记录并渲染热力图
   await fetchSignInRecords()
 })
