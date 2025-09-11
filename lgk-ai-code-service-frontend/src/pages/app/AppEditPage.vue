@@ -6,9 +6,9 @@ import {
   getAppVoById,
   updateApp,
   updateAppByAdmin
-} from '@/api/appController'
-import { useLoginUserStore } from '@/stores/loginUser'
-import { getCodeGenTypeOptions } from '@/constants/codeGenType'
+} from '@/api/appController.ts'
+import { useLoginUserStore } from '@/stores/loginUser.ts'
+import { getCodeGenTypeOptions } from '@/constants/codeGenType.ts'
 import type { API } from '@/api/typings'
 
 const route = useRoute()

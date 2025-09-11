@@ -2,7 +2,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Modal, Alert } from 'ant-design-vue'
-import { showSuccess, showError } from '@/utils/message'
+import { showSuccess, showError } from '@/utils/message.ts'
 import {
   Html5Outlined,
   FileOutlined,
@@ -22,18 +22,18 @@ import {
   deployApp,
   updateApp,
   deleteApp
-} from '@/api/appController'
-import { useLoginUserStore } from '@/stores/loginUser'
-import { listAppChatHistory } from '@/api/chatHistoryController'
-import { healthCheck } from '@/api/healthController'
+} from '@/api/appController.ts'
+import { useLoginUserStore } from '@/stores/loginUser.ts'
+import { listAppChatHistory } from '@/api/chatHistoryController.ts'
+import { healthCheck } from '@/api/healthController.ts'
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/github.css'
 import '@/assets/collapsible-code.css'
-import { getStaticPreviewUrl, API_BASE_URL } from '../constants/urls'
-import { getCodeGenTypeConfig } from '@/constants/codeGenType'
-import { VisualEditor, type ElementInfo } from '@/utils/visualEditor'
-import { DebugHelper } from '@/utils/debugHelper'
+import { getStaticPreviewUrl, API_BASE_URL } from '../../constants/urls.ts'
+import { getCodeGenTypeConfig } from '@/constants/codeGenType.ts'
+import { VisualEditor, type ElementInfo } from '@/utils/visualEditor.ts'
+import { DebugHelper } from '@/utils/debugHelper.ts'
 
 const route = useRoute()
 const router = useRouter()
