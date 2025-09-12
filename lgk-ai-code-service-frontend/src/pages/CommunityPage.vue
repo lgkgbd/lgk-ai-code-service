@@ -26,7 +26,7 @@
                 <!-- 表情分类标签 -->
                 <div class="emoji-tabs">
                   <div 
-                    v-for="(category, key) in emojiCategories" 
+                    v-for="(category, key) in emojiCategoryTabs" 
                     :key="key"
                     :class="['emoji-tab', { active: activeEmojiTab === key }]"
                     @click="activeEmojiTab = key"
@@ -37,18 +37,38 @@
                 
                 <!-- 表情内容区域 -->
                 <div class="emoji-content">
-                  <div class="emoji-category-title">
-                    {{ emojiCategories[activeEmojiTab].name }}
+                  <!-- 最近使用 -->
+                  <div v-if="recentEmojis.length > 0">
+                    <div class="emoji-category-title">
+                      {{ emojiCategories.recent.name }}
+                    </div>
+                    <div class="emoji-grid">
+                      <span
+                        v-for="emoji in recentEmojis"
+                        :key="emoji"
+                        class="emoji-item"
+                        @click="selectEmoji(emoji)"
+                      >
+                        {{ emoji }}
+                      </span>
+                    </div>
                   </div>
-                  <div class="emoji-grid">
-                    <span 
-                      v-for="emoji in emojiCategories[activeEmojiTab].emojis.value || emojiCategories[activeEmojiTab].emojis" 
-                      :key="emoji"
-                      class="emoji-item"
-                      @click="selectEmoji(emoji)"
-                    >
-                      {{ emoji }}
-                    </span>
+
+                  <!-- 当前选中的分类 -->
+                  <div v-if="activeEmojiTab !== 'recent'">
+                    <div class="emoji-category-title">
+                      {{ emojiCategories[activeEmojiTab].name }}
+                    </div>
+                    <div class="emoji-grid">
+                      <span
+                        v-for="emoji in emojiCategories[activeEmojiTab].emojis.value || emojiCategories[activeEmojiTab].emojis"
+                        :key="emoji"
+                        class="emoji-item"
+                        @click="selectEmoji(emoji)"
+                      >
+                        {{ emoji }}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -148,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import { listPostVoByPage, addPost } from '@/api/postController'
 import PostForm from '@/components/PostForm.vue'
@@ -157,7 +177,14 @@ import PostForm from '@/components/PostForm.vue'
 const postContent = ref('')
 const showPostForm = ref(false)
 const showEmojiPicker = ref(false)
-const activeEmojiTab = ref('recent')
+const activeEmojiTab = ref('face')
+
+const emojiCategoryTabs = computed(() => {
+  const tabs = { ...emojiCategories }
+  delete tabs.recent
+  return tabs
+})
+
 const recentEmojis = ref<string[]>(['👍', '😊', '😂', '❤️'])
 
 // 导航标签
@@ -189,15 +216,14 @@ const loadPosts = async () => {
     
     console.log('请求参数:', params) // 调试日志
     
-    const res = await listPostVoByPage(params)
+    const { data: res } = await listPostVoByPage(params)
     
     console.log('API完整响应:', res) // 调试日志
     
-    if (res && res.code === 0 && res.data && res.data.records) {
-      // 强制重新赋值
-      const newPosts = [...res.data.records]
-      posts.value = newPosts
-      pagination.total = Number(res.data.totalRow) || 0
+    if (res?.code === 0) {
+      const records = res.data?.records || []
+      posts.value = [...records]
+      pagination.total = Number(res.data?.totalRow) || 0
       
       console.log('解析后的帖子数据:', posts.value) // 调试日志
       console.log('帖子数量:', posts.value.length) // 调试日志
@@ -208,14 +234,14 @@ const loadPosts = async () => {
         console.log('延迟检查posts:', posts.value.length)
       }, 100)
       
-      if (posts.value.length > 0) {
-        message.success(`成功加载 ${posts.value.length} 条帖子`)
-      }
     } else {
       console.error('API返回格式错误:', res)
       posts.value = []
-      if (res && res.message) {
+      // Only show an error if there is a message and it's not a simple "ok"
+      if (res?.message && res.message.toLowerCase() !== 'ok') {
         message.error(res.message)
+      } else if (!res?.message && res?.code !== 0) {
+        message.error('加载帖子列表失败')
       }
     }
   } catch (error) {
@@ -233,7 +259,7 @@ const handlePublish = async () => {
   }
   
   try {
-    const res = await addPost({
+    const { data: res } = await addPost({
       title: '',
       content: postContent.value,
       tags: [],
@@ -386,7 +412,7 @@ onUnmounted(() => {
   background: white;
   margin-bottom: 12px;
   border-radius: 8px;
-  overflow: hidden;
+  /* overflow: hidden; */ /* 解决表情选择器被遮挡的问题 */
 }
 
 .publish-tabs {
