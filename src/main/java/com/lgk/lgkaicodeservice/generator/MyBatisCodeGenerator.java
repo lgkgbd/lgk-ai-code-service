@@ -13,7 +13,7 @@ import java.util.Map;
 public class MyBatisCodeGenerator {
 
     // 需要生成的表名
-    private static final String[] TABLE_NAMES = {"chat_history"};
+    private static final String[] TABLE_NAMES = {"post"};
 
     public static void main(String[] args) {
         // 获取数据源信息

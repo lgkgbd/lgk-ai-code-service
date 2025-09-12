@@ -67,3 +67,27 @@ create table if not exists chat_history
 
 -- 新加一个思考的字段, 框架升级再用
 -- ALTER TABLE chat_history ADD COLUMN reasoningContent TEXT NULL AFTER message;
+
+
+-- 帖子表
+create table if not exists post
+(
+    id         bigint auto_increment comment '帖子id' primary key,
+    title      varchar(512)                       null comment '标题',
+    content    text                               null comment '内容',
+    tags       varchar(1024)                      null comment '标签列表（json 数组）',
+    coverImage varchar(512)                       null comment '封面图片URL',
+    thumbNum   int      default 0                 not null comment '点赞数',
+    favourNum  int      default 0                 not null comment '收藏数',
+    viewNum    int      default 0                 not null comment '浏览量',
+    userId     bigint                             not null comment '创建用户id',
+    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete   tinyint  default 0                 not null comment '是否删除',
+    priority     int      default 0                 not null comment '优先级',
+    index idx_userId (userId)
+) comment '帖子表' collate = utf8mb4_unicode_ci;
+
+-- 修改帖子表，新增总结字段,后面有时间就写一个添加玩之后的异步去给ai生成总结
+# ALTER TABLE post
+#     ADD COLUMN summary TEXT NULL COMMENT '总结';
