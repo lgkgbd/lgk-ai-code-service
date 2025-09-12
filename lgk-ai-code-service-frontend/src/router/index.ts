@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomePage from '@/pages/HomePage.vue'
+import CommunityPage from '@/pages/CommunityPage.vue'
 import UserLoginPage from '@/pages/user/UserLoginPage.vue'
 import UserRegisterPage from '@/pages/user/UserRegisterPage.vue'
 import UserProfilePage from '@/pages/user/UserProfilePage.vue'
@@ -20,6 +21,14 @@ const router = createRouter({
       path: '/',
       name: '主页',
       component: HomePage,
+      meta: {
+        access: ACCESS_ENUM.NOT_LOGIN,
+      },
+    },
+    {
+      path: '/community',
+      name: '交流',
+      component: CommunityPage,
       meta: {
         access: ACCESS_ENUM.NOT_LOGIN,
       },

@@ -91,9 +91,21 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponsePagePostVO = {
+    code?: number
+    data?: PagePostVO
+    message?: string
+  }
+
   type BaseResponsePageUserVO = {
     code?: number
     data?: PageUserVO
+    message?: string
+  }
+
+  type BaseResponsePostVO = {
+    code?: number
+    data?: PostVO
     message?: string
   }
 
@@ -181,6 +193,10 @@ declare namespace API {
     id: number
   }
 
+  type getPostVOByIdParams = {
+    id: number
+  }
+
   type getUserByIdParams = {
     id: number
   }
@@ -257,6 +273,15 @@ declare namespace API {
     page: PageChatHistory
   }
 
+  type PagePostVO = {
+    records?: PostVO[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
   type PageUserVO = {
     records?: UserVO[]
     pageNumber?: number
@@ -264,6 +289,48 @@ declare namespace API {
     totalPage?: number
     totalRow?: number
     optimizeCountQuery?: boolean
+  }
+
+  type PostAddRequest = {
+    title?: string
+    content?: string
+    tags?: string[]
+    coverImage?: string
+  }
+
+  type PostQueryRequest = {
+    pageNum?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+    searchText?: string
+    tags?: string[]
+    userId?: number
+    priority?: number
+  }
+
+  type PostUpdateRequest = {
+    id?: number
+    title?: string
+    content?: string
+    tags?: string[]
+    coverImage?: string
+  }
+
+  type PostVO = {
+    id?: number
+    title?: string
+    content?: string
+    tags?: string[]
+    coverImage?: string
+    thumbNum?: number
+    favourNum?: number
+    viewNum?: number
+    userId?: number
+    user?: UserVO
+    createTime?: string
+    updateTime?: string
+    priority?: number
   }
 
   type QualityResult = {

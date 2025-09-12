@@ -63,7 +63,7 @@
 import { storeToRefs } from 'pinia'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { onMounted, ref } from 'vue'
-import { getMyProfile, getUserSignInRecord } from '@/api/userController.ts'
+import { getLoginUser, getUserSignInRecord } from '@/api/userController.ts'
 
 const loginUserStore = useLoginUserStore()
 const { loginUser } = storeToRefs(loginUserStore)
@@ -143,7 +143,7 @@ function buildWeeksFromSignedDays(signedArr: number[]) {
 
 onMounted(async () => {
   // 尝试刷新个人信息（后端若已在 cookie 会返回当前登录用户）
-  const res = await getMyProfile()
+  const res = await getLoginUser()
   if (res.data.code === 0 && res.data.data) {
     loginUserStore.setLoginUser(res.data.data)
   }
