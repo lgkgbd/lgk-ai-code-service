@@ -136,49 +136,6 @@
       <div v-else class="no-posts">
         <p>暂无帖子，快来发布第一个吧！</p>
       </div>
-        <div class="post-header">
-          <div class="user-info">
-            <a-avatar :src="post.user?.userAvatar" :size="40">
-              {{ post.user?.userName?.charAt(0) }}
-            </a-avatar>
-            <div class="user-details">
-              <div class="username">{{ post.user?.userName || '匿名用户' }}</div>
-              <div class="post-meta">
-                <span class="post-time">{{ formatTime(post.createTime) }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="post-content">
-          <h3 v-if="post.title" class="post-title">{{ post.title }}</h3>
-          <div class="post-text">{{ post.content }}</div>
-          <div v-if="post.tags && post.tags.length > 0" class="post-tags">
-            <a-tag v-for="tag in parseTags(post.tags)" :key="tag" color="blue" class="post-tag">
-              {{ tag }}
-            </a-tag>
-          </div>
-        </div>
-        
-        <div class="post-actions">
-          <a-button type="text" class="action-item">
-            <template #icon>👍</template>
-            {{ post.thumbNum || 0 }}
-          </a-button>
-          <a-button type="text" class="action-item">
-            <template #icon>💬</template>
-            {{ post.favourNum || 0 }}
-          </a-button>
-          <a-button type="text" class="action-item">
-            <template #icon>⭐</template>
-            {{ post.favourNum || 0 }}
-          </a-button>
-          <a-button type="text" class="action-item">
-            <template #icon>📤</template>
-            分享
-          </a-button>
-        </div>
-      </div>
     </div>
 
     <!-- 发布帖子弹窗 -->
