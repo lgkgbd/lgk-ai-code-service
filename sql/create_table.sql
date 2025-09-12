@@ -74,7 +74,7 @@ create table if not exists post
 (
     id         bigint auto_increment comment '帖子id' primary key,
     title      varchar(512)                       null comment '标题',
-    content    text                               null comment '内容',
+    content    longtext                               null comment '内容',
     tags       varchar(1024)                      null comment '标签列表（json 数组）',
     coverImage varchar(512)                       null comment '封面图片URL',
     thumbNum   int      default 0                 not null comment '点赞数',
