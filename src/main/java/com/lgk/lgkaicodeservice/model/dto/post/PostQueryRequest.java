@@ -11,14 +11,9 @@ import java.util.List;
 public class PostQueryRequest extends PageRequest {
 
     /**
-     * 标题（模糊搜索）
+     * （模糊搜索）
      */
-    private String title;
-
-    /**
-     * 内容（模糊搜索）
-     */
-    private String content;
+    private String searchText;
 
     /**
      * 标签列表
@@ -31,7 +26,7 @@ public class PostQueryRequest extends PageRequest {
     private Long userId;
 
     /**
-     * 是否加精（0-普通，1-加精）
+     * 优先级
      */
-    private Integer isFeatured;
+    private Integer priority;
 }

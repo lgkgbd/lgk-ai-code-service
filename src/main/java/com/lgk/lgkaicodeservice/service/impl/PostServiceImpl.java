@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import com.lgk.lgkaicodeservice.model.entity.User;
 import com.lgk.lgkaicodeservice.model.vo.UserVO;
 import com.lgk.lgkaicodeservice.service.UserService;
+import com.mybatisflex.core.constant.SqlOperator;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.update.UpdateChain;
@@ -20,6 +21,7 @@ import com.lgk.lgkaicodeservice.mapper.PostMapper;
 import com.lgk.lgkaicodeservice.model.vo.PostVO;
 import com.lgk.lgkaicodeservice.service.PostService;
 import jakarta.annotation.Resource;
+import jodd.util.StringUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -49,7 +51,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         // 参数校验
         String title = postAddRequest.getTitle();
         String content = postAddRequest.getContent();
-        ThrowUtils.throwIf(!StringUtils.hasText(title), ErrorCode.PARAMS_ERROR, "标题不能为空");
+        //ThrowUtils.throwIf(!StringUtils.hasText(title), ErrorCode.PARAMS_ERROR, "标题不能为空");
         ThrowUtils.throwIf(!StringUtils.hasText(content), ErrorCode.PARAMS_ERROR, "内容不能为空");
         ThrowUtils.throwIf(title.length() > 100, ErrorCode.PARAMS_ERROR, "标题过长");
 
@@ -144,14 +146,12 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         QueryWrapper queryWrapper = QueryWrapper.create()
                 .eq(Post::getIsDelete, 0);
 
-        // 标题模糊搜索
-        if (StringUtils.hasText(postQueryRequest.getTitle())) {
-            queryWrapper.and(Post::getTitle).like(postQueryRequest.getTitle());
-        }
-
-        // 内容模糊搜索
-        if (StringUtils.hasText(postQueryRequest.getContent())) {
-            queryWrapper.and(Post::getContent).like(postQueryRequest.getContent());
+        // 模糊搜索标题和内容
+        if (StringUtils.hasText(postQueryRequest.getSearchText())) {
+            queryWrapper.and(qw ->{
+                qw.like(Post::getTitle, postQueryRequest.getSearchText())
+                        .or(Post::getContent).like(postQueryRequest.getSearchText());
+            } );
         }
 
         // 用户id筛选
@@ -159,9 +159,9 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             queryWrapper.and(Post::getUserId).eq(postQueryRequest.getUserId());
         }
 
-        // 是否加精筛选
-        if (postQueryRequest.getIsFeatured() != null) {
-            queryWrapper.and(Post::getPriority).eq(postQueryRequest.getIsFeatured());
+        // 是否查询精选筛选
+        if (postQueryRequest.getPriority() != null && postQueryRequest.getPriority() > 0) {
+            queryWrapper.and(Post::getPriority).gt(0);
         }
 
         // 排序
