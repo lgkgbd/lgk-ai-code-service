@@ -11,7 +11,7 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { addPost } from '@/api/postController';
-import { message } from 'ant-design-vue';
+import { showSuccess, showError } from '@/utils/message';
 import Vditor from 'vditor';
 import 'vditor/dist/index.css';
 
@@ -31,12 +31,12 @@ onMounted(() => {
 
 const publishPost = async () => {
   if (!title.value) {
-    message.error('请输入标题');
+    showError('请输入标题');
     return;
   }
   const content = contentEditor.value?.getValue();
   if (!content) {
-    message.error('请输入内容');
+    showError('请输入内容');
     return;
   }
 
@@ -47,13 +47,13 @@ const publishPost = async () => {
       tags: [], // 可以在这里添加标签功能
     });
     if (res.data.code === 0) {
-      message.success('发布成功');
+      showSuccess('发布成功');
       router.push('/community');
     } else {
-      message.error('发布失败：' + res.data.message);
+      showError('发布失败：' + res.data.message);
     }
   } catch (error) {
-    message.error('发布失败');
+    showError('发布失败');
   }
 };
 </script>

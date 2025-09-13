@@ -253,7 +253,7 @@ onMounted(() => {
   justify-content: center;
   gap: 16px;
   padding: 20px;
-  background-color: #f5f5f5;
+  background-color: transparent;
 }
 
 .floating-actions {
@@ -263,10 +263,10 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: white;
+  background: transparent;
   padding: 12px;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.09);
+  box-shadow: none;
 }
 
 .floating-actions .action-btn {

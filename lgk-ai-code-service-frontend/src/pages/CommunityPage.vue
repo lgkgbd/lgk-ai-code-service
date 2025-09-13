@@ -100,13 +100,6 @@
 
     <!-- 帖子列表 -->
     <div class="posts-list">
-      <!-- 调试信息 -->
-      <div class="debug-info" style="padding: 10px; background: #f0f0f0; margin-bottom: 10px; font-size: 12px;">
-        <p>调试信息: posts数组长度: {{ posts?.length || 0 }}</p>
-        <p>posts类型: {{ typeof posts }}</p>
-        <p>第一个帖子: {{ posts?.[0]?.title || '无' }}</p>
-      </div>
-      
       <template v-if="posts && posts.length > 0">
         <div v-for="post in posts" :key="post.id" class="post-item" @click="handlePostClick(post.id)">
           <div class="post-header">
