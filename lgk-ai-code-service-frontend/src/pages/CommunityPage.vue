@@ -124,7 +124,7 @@
           
           <div class="post-content">
             <h3 v-if="post.title" class="post-title">{{ post.title }}</h3>
-            <div class="post-text">{{ post.content }}</div>
+            <div class="post-text">{{ truncateText(post.content) }}</div>
             <div v-if="post.tags && post.tags.length > 0" class="post-tags">
               <a-tag v-for="tag in parseTags(post.tags)" :key="tag" color="blue" class="post-tag">
                 {{ tag }}
@@ -239,22 +239,22 @@ const loadPosts = async () => {
       posts.value = []
       // Only show an error if there is a message and it's not a simple "ok"
       if (res?.message && res.message.toLowerCase() !== 'ok') {
-        message.error(res.message)
+        message.error({ content: res.message, duration: 2.5, closable: true, onClick: () => message.destroy() })
       } else if (!res?.message && res?.code !== 0) {
-        message.error('加载帖子列表失败')
+        message.error({ content: '加载帖子列表失败', duration: 2.5, closable: true, onClick: () => message.destroy() })
       }
     }
   } catch (error) {
     console.error('加载帖子失败:', error)
     posts.value = []
-    message.error('网络错误，请稍后重试')
+    message.error({ content: '网络错误，请稍后重试', duration: 2.5, closable: true, onClick: () => message.destroy() })
   }
 }
 
 // 发布帖子
 const handlePublish = async () => {
   if (!postContent.value.trim()) {
-    message.warning('请输入内容')
+    message.warning({ content: '请输入内容', duration: 2.5, closable: true, onClick: () => message.destroy() })
     return
   }
   
@@ -267,14 +267,14 @@ const handlePublish = async () => {
     })
     
     if (res.code === 0) {
-      message.success('发布成功')
+      message.success({ content: '发布成功', duration: 2.5, closable: true, onClick: () => message.destroy() })
       postContent.value = ''
       loadPosts()
     } else {
-      message.error(res.message || '发布失败')
+      message.error({ content: res.message || '发布失败', duration: 2.5, closable: true, onClick: () => message.destroy() })
     }
   } catch (error) {
-    message.error('发布失败')
+    message.error({ content: '发布失败', duration: 2.5, closable: true, onClick: () => message.destroy() })
   }
 }
 
@@ -365,6 +365,15 @@ const parseTags = (tags: string[] | string | undefined) => {
   }
   return []
 }
+
+// 截断文本
+const truncateText = (text: string | undefined, length = 100) => {
+  if (!text) return '';
+  if (text.length > length) {
+    return text.substring(0, length) + '...';
+  }
+  return text;
+};
 
 // 格式化时间
 const formatTime = (time: string | undefined) => {
