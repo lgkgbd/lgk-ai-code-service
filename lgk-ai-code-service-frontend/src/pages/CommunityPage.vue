@@ -4,6 +4,7 @@
     <div class="publish-section">
       <div class="publish-tabs">
         <a-button type="primary" class="tab-btn active">随便聊</a-button>
+        <a-button type="default" class="tab-btn" @click="goToWriteArticle">写文章</a-button>
         <div class="right-actions">
         </div>
       </div>
@@ -184,6 +185,10 @@ import { listPostVoByPage, addPost } from '@/api/postController'
 import PostForm from '@/components/PostForm.vue'
 
 const router = useRouter()
+
+const goToWriteArticle = () => {
+  router.push('/post/write')
+}
 
 // 发布相关
 const postContent = ref('')

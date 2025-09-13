@@ -11,6 +11,7 @@ import AppChatPage from '@/pages/app/AppChatPage.vue'
 import AppEditPage from '@/pages/app/AppEditPage.vue'
 import AboutPage from '@/pages/AboutPage.vue'
 import PostDetailPage from '@/pages/PostDetailPage.vue'
+import WritePostPage from '@/pages/WritePostPage.vue'
 import ACCESS_ENUM from '@/access/accessEnum.ts'
 import { useLoginUserStore } from '@/stores/loginUser'
 import checkAccess from '@/access/checkAccess'
@@ -116,6 +117,14 @@ const router = createRouter({
       component: PostDetailPage,
       meta: {
         access: ACCESS_ENUM.NOT_LOGIN,
+      },
+    },
+    {
+      path: '/post/write',
+      name: '写文章',
+      component: WritePostPage,
+      meta: {
+        access: ACCESS_ENUM.USER,
       },
     },
   ],

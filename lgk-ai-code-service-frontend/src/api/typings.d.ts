@@ -434,3 +434,12 @@ declare namespace API {
     errorMessage?: string
   }
 }
+
+declare module 'vditor' {
+  class Vditor {
+    constructor(id: string, options?: any);
+    getValue(): string;
+    // Add other methods you use here
+  }
+  export default Vditor;
+}
