@@ -153,8 +153,17 @@
         </div>
       </template>
       
-      <div v-else class="no-posts">
+      <div v-else-if="!isLoading" class="no-posts">
         <p>暂无帖子，快来发布第一个吧！</p>
+      </div>
+
+      <!-- 加载更多提示 -->
+      <div v-if="isLoading && posts.length > 0" class="loading-indicator">
+        <a-spin />
+        <span style="margin-left: 8px;">加载中...</span>
+      </div>
+      <div v-if="!isLoading && posts.length > 0 && posts.length >= pagination.total && pagination.total > 0" class="loading-indicator">
+        <span>--- 我是有底线的 ---</span>
       </div>
     </div>
 
@@ -203,9 +212,24 @@ const pagination = reactive({
   pageSize: 10,
   total: 0
 })
+const isLoading = ref(false)
 
 // 加载帖子
-const loadPosts = async () => {
+const loadPosts = async (loadMore = false) => {
+  if (isLoading.value) return
+
+  if (loadMore && posts.value.length >= pagination.total && pagination.total > 0) {
+    return
+  }
+
+  isLoading.value = true
+
+  if (loadMore) {
+    pagination.current++
+  } else {
+    pagination.current = 1
+  }
+
   try {
     const params: any = {
       pageNum: pagination.current,
@@ -214,30 +238,19 @@ const loadPosts = async () => {
       sortOrder: 'desc'
     }
     
-    console.log('请求参数:', params) // 调试日志
-    
     const { data: res } = await listPostVoByPage(params)
-    
-    console.log('API完整响应:', res) // 调试日志
     
     if (res?.code === 0) {
       const records = res.data?.records || []
-      posts.value = [...records]
+      if (loadMore) {
+        posts.value.push(...records)
+      } else {
+        posts.value = records
+      }
       pagination.total = Number(res.data?.totalRow) || 0
-      
-      console.log('解析后的帖子数据:', posts.value) // 调试日志
-      console.log('帖子数量:', posts.value.length) // 调试日志
-      console.log('第一个帖子标题:', posts.value[0]?.title) // 调试日志
-      
-      // 强制触发响应式更新
-      setTimeout(() => {
-        console.log('延迟检查posts:', posts.value.length)
-      }, 100)
-      
     } else {
+      if (loadMore) pagination.current--
       console.error('API返回格式错误:', res)
-      posts.value = []
-      // Only show an error if there is a message and it's not a simple "ok"
       if (res?.message && res.message.toLowerCase() !== 'ok') {
         message.error({ content: res.message, duration: 2.5, closable: true, onClick: () => message.destroy() })
       } else if (!res?.message && res?.code !== 0) {
@@ -245,9 +258,11 @@ const loadPosts = async () => {
       }
     }
   } catch (error) {
+    if (loadMore) pagination.current--
     console.error('加载帖子失败:', error)
-    posts.value = []
     message.error({ content: '网络错误，请稍后重试', duration: 2.5, closable: true, onClick: () => message.destroy() })
+  } finally {
+    isLoading.value = false
   }
 }
 
@@ -348,7 +363,7 @@ const emojiCategories = {
 // 监听标签页切换
 const handleTabChange = (tabKey: string) => {
   activeTab.value = tabKey
-  pagination.current = 1
+  posts.value = [] // 立即清空以获得更好的用户体验
   loadPosts()
 }
 
@@ -396,14 +411,24 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
+// 滚动加载
+const handleScroll = () => {
+  const { scrollTop, clientHeight, scrollHeight } = document.documentElement
+  if (scrollTop + clientHeight >= scrollHeight - 100) {
+    loadPosts(true)
+  }
+}
+
 onMounted(async () => {
   console.log('组件挂载，开始加载帖子')
   await loadPosts()
   document.addEventListener('click', handleClickOutside)
+  window.addEventListener('scroll', handleScroll)
 })
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
@@ -718,6 +743,12 @@ onUnmounted(() => {
 .action-item:hover {
   color: #1890ff;
   background: #f0f8ff;
+}
+
+.loading-indicator {
+  padding: 20px;
+  text-align: center;
+  color: #999;
 }
 
 /* 响应式 */
