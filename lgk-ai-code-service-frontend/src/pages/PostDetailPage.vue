@@ -58,7 +58,7 @@
 
       <!-- 帖子内容 -->
       <div class="post-content">
-        <div class="content-text" v-html="formatContent(post.content)"></div>
+        <div class="content-text" v-html="formattedContent"></div>
       </div>
 
       <!-- 帖子操作栏 -->
@@ -149,10 +149,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPostVoById } from '@/api/postController'
 import { showError, showSuccess, showWarning } from '@/utils/message'
+import { marked } from 'marked'
 
 const route = useRoute()
 const router = useRouter()
@@ -224,11 +225,14 @@ const parseTags = (tags: string[] | string | undefined) => {
   return []
 }
 
-// 格式化内容（简单的换行处理）
-const formatContent = (content: string | undefined) => {
-  if (!content) return ''
-  return content.replace(/\n/g, '<br>')
-}
+// 将Markdown内容转换为HTML
+const formattedContent = computed(() => {
+  if (!post.value?.content) {
+    return ''
+  }
+  return marked(post.value.content)
+})
+
 
 // 点赞处理
 const handleLike = () => {
