@@ -107,7 +107,7 @@
       </div>
       
       <template v-if="posts && posts.length > 0">
-        <div v-for="post in posts" :key="post.id" class="post-item">
+        <div v-for="post in posts" :key="post.id" class="post-item" @click="handlePostClick(post.id)">
           <div class="post-header">
             <div class="user-info">
               <a-avatar :src="post.user?.userAvatar" :size="40">
@@ -123,7 +123,7 @@
           </div>
           
           <div class="post-content">
-            <h3 v-if="post.title" class="post-title">{{ post.title }}</h3>
+            <h3 v-if="post.title" class="post-title" @click.stop="handlePostClick(post.id)">{{ post.title }}</h3>
             <div class="post-text">{{ truncateText(post.content) }}</div>
             <div v-if="post.tags && post.tags.length > 0" class="post-tags">
               <a-tag v-for="tag in parseTags(post.tags)" :key="tag" color="blue" class="post-tag">
@@ -179,8 +179,11 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
+import { useRouter } from 'vue-router'
 import { listPostVoByPage, addPost } from '@/api/postController'
 import PostForm from '@/components/PostForm.vue'
+
+const router = useRouter()
 
 // 发布相关
 const postContent = ref('')
@@ -408,6 +411,13 @@ const handleClickOutside = (event: Event) => {
   const target = event.target as HTMLElement
   if (!target.closest('.emoji-container')) {
     showEmojiPicker.value = false
+  }
+}
+
+// 点击帖子跳转到详情页
+const handlePostClick = (postId: string | undefined) => {
+  if (postId) {
+    router.push(`/post/${postId}`)
   }
 }
 
@@ -670,6 +680,12 @@ onUnmounted(() => {
 .post-item {
   padding: 20px;
   border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.post-item:hover {
+  background-color: #fafafa;
 }
 
 .post-item:last-child {
@@ -710,6 +726,12 @@ onUnmounted(() => {
   color: #333;
   margin-bottom: 8px;
   line-height: 1.4;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.post-title:hover {
+  color: #1890ff;
 }
 
 .post-text {

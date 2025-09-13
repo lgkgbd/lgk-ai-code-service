@@ -10,12 +10,17 @@ import ChatManagePage from '@/pages/admin/ChatManagePage.vue'
 import AppChatPage from '@/pages/app/AppChatPage.vue'
 import AppEditPage from '@/pages/app/AppEditPage.vue'
 import AboutPage from '@/pages/AboutPage.vue'
+import PostDetailPage from '@/pages/PostDetailPage.vue'
 import ACCESS_ENUM from '@/access/accessEnum.ts'
 import { useLoginUserStore } from '@/stores/loginUser'
 import checkAccess from '@/access/checkAccess'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior() {
+    // 始终滚动到顶部
+    return { top: 0 }
+  },
   routes: [
     {
       path: '/',
@@ -101,6 +106,14 @@ const router = createRouter({
       path: '/about',
       name: '关于',
       component: AboutPage,
+      meta: {
+        access: ACCESS_ENUM.NOT_LOGIN,
+      },
+    },
+    {
+      path: '/post/:id',
+      name: '帖子详情',
+      component: PostDetailPage,
       meta: {
         access: ACCESS_ENUM.NOT_LOGIN,
       },
