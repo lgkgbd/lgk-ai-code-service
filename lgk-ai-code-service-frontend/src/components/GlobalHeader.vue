@@ -19,7 +19,13 @@
           </a>
         </div>
       </div>
-
+      <a-input-search
+        v-if="!props.hideSearch"
+        v-model:value="searchText"
+        placeholder="搜索"
+        style="width: 200px; margin-left: 16px"
+        @search="onSearch"
+      />
       <div class="right">
         <div class="user-login-status">
           <div v-if="loginUserStore.loginUser.id" class="user-info">
@@ -56,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons-vue'
@@ -72,12 +78,14 @@ type MenuItem = {
 }
 
 const props = defineProps<{
-  menuItems: MenuItem[]
+  menuItems: MenuItem[],
+  hideSearch?: boolean
 }>()
 
 const loginUserStore = useLoginUserStore()
 const route = useRoute()
 const router = useRouter()
+const searchText = ref(route.query.text || '')
 
 // 前往个人主页
 const goProfile = () => {
@@ -110,7 +118,6 @@ const doLogout = async () => {
       message.success({
         content: '退出登录成功',
         duration: 3,
-        closable: true,
         onClick: () => {
           message.destroy()
         },
@@ -120,7 +127,6 @@ const doLogout = async () => {
       message.error({
         content: '退出登录失败，' + res.data.message,
         duration: 3,
-        closable: true,
         onClick: () => {
           message.destroy()
         },
@@ -130,7 +136,6 @@ const doLogout = async () => {
     message.error({
       content: '退出登录失败',
       duration: 3,
-      closable: true,
       onClick: () => {
         message.destroy()
       },
@@ -142,6 +147,15 @@ function onMenuItemClick(path: string) {
   if (path && path !== route.path) {
     router.push(path)
   }
+}
+
+const onSearch = (value: string) => {
+  router.push({
+    path: '/search',
+    query: {
+      text: value,
+    },
+  })
 }
 </script>
 

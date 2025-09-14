@@ -12,6 +12,8 @@ const isChatPage = computed(() => {
   return route.path.includes('/app/chat/')
 })
 
+const hideHeaderSearch = computed(() => route.meta.hideHeaderSearch)
+
 type MenuItem = {
   key: string
   label: string
@@ -30,7 +32,7 @@ const menuItems = reactive<MenuItem[]>([
 
 <template>
   <a-layout class="basic-layout">
-    <GlobalHeader :menu-items="menuItems" />
+    <GlobalHeader :menu-items="menuItems" :hide-search="hideHeaderSearch" />
 
     <a-layout-content class="site-content" :class="{ 'chat-page-content': isChatPage }">
       <div class="content-wrapper" :class="{ 'chat-page-wrapper': isChatPage }">

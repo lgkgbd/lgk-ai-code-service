@@ -24,6 +24,14 @@ public class PictureDataSource implements DataSource<Picture>{
     @Override
     public Page<Picture> doSearch(String searchText, long pageNum, long pageSize) {
         long current = (pageNum - 1) * pageSize;
+
+//        try {
+//            // 休眠 300~500 毫秒
+//            Thread.sleep(500);
+//        } catch (InterruptedException e) {
+//            e.printStackTrace();
+//        }
+
         String url = String.format("https://cn.bing.com/images/search?q=%s&first=%s",searchText,current);
         Document doc;
         try {

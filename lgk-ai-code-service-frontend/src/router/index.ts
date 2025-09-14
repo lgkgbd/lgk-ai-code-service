@@ -12,6 +12,7 @@ import AppEditPage from '@/pages/app/AppEditPage.vue'
 import AboutPage from '@/pages/AboutPage.vue'
 import PostDetailPage from '@/pages/PostDetailPage.vue'
 import WritePostPage from '@/pages/WritePostPage.vue'
+import SearchPage from '@/pages/SearchPage.vue'
 import ACCESS_ENUM from '@/access/accessEnum.ts'
 import { useLoginUserStore } from '@/stores/loginUser'
 import checkAccess from '@/access/checkAccess'
@@ -125,6 +126,15 @@ const router = createRouter({
       component: WritePostPage,
       meta: {
         access: ACCESS_ENUM.USER,
+      },
+    },
+    {
+      path: '/search',
+      name: '搜索',
+      component: SearchPage,
+      meta: {
+        access: ACCESS_ENUM.NOT_LOGIN,
+        hideHeaderSearch: true,
       },
     },
   ],
