@@ -82,6 +82,34 @@
       </div>
     </div>
 
+    <!-- 搜索区域 -->
+    <div class="search-section">
+      <div class="search-container">
+        <a-input
+          v-model:value="searchKeyword"
+          placeholder="搜索帖子内容、标题或用户..."
+          class="search-input"
+          @pressEnter="handleSearch"
+          @input="handleSearchInput"
+        >
+          <template #prefix>
+            <SearchOutlined />
+          </template>
+        </a-input>
+        <a-button 
+          type="primary" 
+          class="search-btn"
+          @click="handleSearch"
+          :loading="isSearching"
+        >
+          搜索
+        </a-button>
+      </div>
+      <div v-if="searchKeyword && searchResults.length === 0 && !isSearching" class="no-results">
+        没有找到相关内容
+      </div>
+    </div>
+
     <!-- 导航标签 -->
     <div class="nav-tabs">
       <a-button 
@@ -100,8 +128,8 @@
 
     <!-- 帖子列表 -->
     <div class="posts-list">
-      <template v-if="posts && posts.length > 0">
-        <div v-for="post in posts" :key="post.id" class="post-item" @click="handlePostClick(post.id)">
+      <template v-if="displayPosts && displayPosts.length > 0">
+        <div v-for="post in displayPosts" :key="post.id" class="post-item" @click="handlePostClick(post.id)">
           <div class="post-header">
             <div class="user-info">
               <a-avatar :src="post.user?.userAvatar" :size="40">
@@ -147,7 +175,7 @@
         </div>
       </template>
       
-      <div v-else-if="!isLoading" class="no-posts">
+      <div v-else-if="!isLoading && !searchKeyword" class="no-posts">
         <p>暂无帖子，快来发布第一个吧！</p>
       </div>
 
@@ -174,6 +202,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
+import { SearchOutlined } from '@ant-design/icons-vue'
 import { listPostVoByPage, addPost } from '@/api/postController'
 import PostForm from '@/components/PostForm.vue'
 
@@ -214,6 +243,16 @@ const pagination = reactive({
   total: 0
 })
 const isLoading = ref(false)
+
+// 搜索相关
+const searchKeyword = ref('')
+const searchResults = ref<API.PostVO[]>([])
+const isSearching = ref(false)
+
+// 显示的帖子列表（搜索时显示搜索结果，否则显示全部帖子）
+const displayPosts = computed(() => {
+  return searchKeyword.value ? searchResults.value : posts.value
+})
 
 // 加载帖子
 const loadPosts = async (loadMore = false) => {
@@ -412,6 +451,52 @@ const handleClickOutside = (event: Event) => {
   }
 }
 
+// 搜索功能
+const handleSearch = async () => {
+  if (!searchKeyword.value.trim()) {
+    searchResults.value = []
+    return
+  }
+
+  isSearching.value = true
+  try {
+    // 在本地帖子中搜索
+    const keyword = searchKeyword.value.toLowerCase()
+    searchResults.value = posts.value.filter(post => {
+      const title = (post.title || '').toLowerCase()
+      const content = (post.content || '').toLowerCase()
+      const userName = (post.user?.userName || '').toLowerCase()
+      const tags = parseTags(post.tags).join(' ').toLowerCase()
+      
+      return title.includes(keyword) || 
+             content.includes(keyword) || 
+             userName.includes(keyword) ||
+             tags.includes(keyword)
+    })
+  } catch (error) {
+    console.error('搜索失败:', error)
+    message.error('搜索失败，请稍后重试')
+  } finally {
+    isSearching.value = false
+  }
+}
+
+const handleSearchInput = () => {
+  // 实时搜索，防抖处理
+  if (searchInputTimer.value) {
+    clearTimeout(searchInputTimer.value)
+  }
+  searchInputTimer.value = setTimeout(() => {
+    if (searchKeyword.value.trim()) {
+      handleSearch()
+    } else {
+      searchResults.value = []
+    }
+  }, 300)
+}
+
+const searchInputTimer = ref<NodeJS.Timeout | null>(null)
+
 // 点击帖子跳转到详情页
 const handlePostClick = (postId: string | undefined) => {
   if (postId) {
@@ -447,6 +532,38 @@ onUnmounted(() => {
   padding: 0;
   background: #f5f5f5;
   min-height: calc(100vh - 120px);
+}
+
+/* 搜索区域样式 */
+.search-section {
+  background: white;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  padding: 16px 20px;
+}
+
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-input {
+  flex: 1;
+  border-radius: 20px;
+}
+
+.search-btn {
+  border-radius: 20px;
+  padding: 4px 16px;
+  height: 32px;
+}
+
+.no-results {
+  text-align: center;
+  color: #999;
+  margin-top: 12px;
+  font-size: 14px;
 }
 
 /* 发布区域 */
