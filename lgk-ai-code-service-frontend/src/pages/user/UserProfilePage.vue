@@ -93,8 +93,9 @@ import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { onMounted, ref } from 'vue'
 import { getLoginUser, getUserSignInRecord, updateUser } from '@/api/userController.ts'
 import { uploadFile } from '@/api/fileController.ts'
-import { message, UploadProps } from 'ant-design-vue'
+import { message, type UploadProps } from 'ant-design-vue'
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue'
+import { showError, showSuccess } from '@/utils/message'
 
 const loginUserStore = useLoginUserStore()
 const { loginUser } = storeToRefs(loginUserStore)
@@ -116,7 +117,7 @@ const handleOk = async () => {
   try {
     const res = await updateUser(editableUser.value)
     if (res.data.code === 0) {
-      message.success('更新成功')
+      showSuccess('更新成功')
       // 重新获取用户信息并更新 store
       const userRes = await getLoginUser()
       if (userRes.data.code === 0 && userRes.data.data) {
@@ -124,10 +125,10 @@ const handleOk = async () => {
       }
       isModalVisible.value = false
     } else {
-      message.error('更新失败: ' + res.data.message)
+      showError('更新失败: ' + res.data.message)
     }
   } catch (e) {
-    message.error('更新失败')
+    showError('更新失败')
   }
 }
 
@@ -138,12 +139,12 @@ const handleAvatarUpload: UploadProps['customRequest'] = async ({ file }) => {
     const res = await uploadFile({ biz: 'user_avatar' }, file as File)
     if (res.data.code === 0 && res.data.data) {
       editableUser.value.userAvatar = res.data.data
-      message.success('上传成功')
+      showSuccess('上传成功')
     } else {
-      message.error('上传失败: ' + res.data.message)
+      showError('上传失败: ' + res.data.message)
     }
   } catch (e) {
-    message.error('上传失败')
+    showError('上传失败')
   } finally {
     uploading.value = false
     hide()
