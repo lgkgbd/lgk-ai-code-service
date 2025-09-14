@@ -91,7 +91,7 @@
 import { storeToRefs } from 'pinia'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { onMounted, ref } from 'vue'
-import { getLoginUser, getUserSignInRecord, updateUser } from '@/api/userController.ts'
+import { getLoginUser, getUserSignInRecord, updateMyUser } from '@/api/userController.ts'
 import { uploadFile } from '@/api/fileController.ts'
 import { message, type UploadProps } from 'ant-design-vue'
 import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue'
@@ -115,7 +115,7 @@ const handleCancel = () => {
 
 const handleOk = async () => {
   try {
-    const res = await updateUser(editableUser.value)
+    const res = await updateMyUser(editableUser.value)
     if (res.data.code === 0) {
       showSuccess('更新成功')
       // 重新获取用户信息并更新 store
