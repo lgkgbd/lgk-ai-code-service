@@ -353,6 +353,14 @@ declare namespace API {
     timeout?: number
   }
 
+  type uploadFileParams = {
+    uploadFileRequest: UploadFileRequest
+  }
+
+  type UploadFileRequest = {
+    biz?: string
+  }
+
   type User = {
     id?: number
     userAccount?: string
@@ -433,13 +441,4 @@ declare namespace API {
     buildResultDir?: string
     errorMessage?: string
   }
-}
-
-declare module 'vditor' {
-  class Vditor {
-    constructor(id: string, options?: any);
-    getValue(): string;
-    // Add other methods you use here
-  }
-  export default Vditor;
 }
