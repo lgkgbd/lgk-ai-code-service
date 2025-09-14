@@ -8,7 +8,7 @@
         <div class="right-actions">
         </div>
       </div>
-      
+
       <div class="publish-input">
         <a-textarea
           v-model:value="postContent"
@@ -26,8 +26,8 @@
               <div v-if="showEmojiPicker" class="emoji-picker">
                 <!-- 表情分类标签 -->
                 <div class="emoji-tabs">
-                  <div 
-                    v-for="(category, key) in emojiCategoryTabs" 
+                  <div
+                    v-for="(category, key) in emojiCategoryTabs"
                     :key="key"
                     :class="['emoji-tab', { active: activeEmojiTab === key }]"
                     @click="activeEmojiTab = key"
@@ -35,7 +35,7 @@
                     <span class="tab-icon">{{ category.icon }}</span>
                   </div>
                 </div>
-                
+
                 <!-- 表情内容区域 -->
                 <div class="emoji-content">
                   <!-- 最近使用 -->
@@ -96,8 +96,8 @@
             <SearchOutlined />
           </template>
         </a-input>
-        <a-button 
-          type="primary" 
+        <a-button
+          type="primary"
           class="search-btn"
           @click="handleSearch"
           :loading="isSearching"
@@ -112,8 +112,8 @@
 
     <!-- 导航标签 -->
     <div class="nav-tabs">
-      <a-button 
-        v-for="tab in navTabs" 
+      <a-button
+        v-for="tab in navTabs"
         :key="tab.key"
         :type="activeTab === tab.key ? 'text' : 'text'"
         :class="['nav-tab', { active: activeTab === tab.key }]"
@@ -143,7 +143,7 @@
               </div>
             </div>
           </div>
-          
+
           <div class="post-content">
             <h3 v-if="post.title" class="post-title" @click.stop="handlePostClick(post.id)">{{ post.title }}</h3>
             <div class="post-text">{{ truncateText(post.content) }}</div>
@@ -153,7 +153,7 @@
               </a-tag>
             </div>
           </div>
-          
+
           <div class="post-actions">
             <a-button type="text" class="action-item">
               <template #icon>👍</template>
@@ -174,7 +174,7 @@
           </div>
         </div>
       </template>
-      
+
       <div v-else-if="!isLoading && !searchKeyword" class="no-posts">
         <p>暂无帖子，快来发布第一个吧！</p>
       </div>
@@ -190,8 +190,8 @@
     </div>
 
     <!-- 发布帖子弹窗 -->
-    <PostForm 
-      :visible="showPostForm" 
+    <PostForm
+      :visible="showPostForm"
       @cancel="showPostForm = false"
       @success="handlePostSuccess"
     />
@@ -204,7 +204,6 @@ import { message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import { listPostVoByPage, addPost } from '@/api/postController'
-import PostForm from '@/components/PostForm.vue'
 
 const router = useRouter()
 
@@ -277,9 +276,9 @@ const loadPosts = async (loadMore = false) => {
       sortField: 'createTime',
       sortOrder: 'desc'
     }
-    
+
     const { data: res } = await listPostVoByPage(params)
-    
+
     if (res?.code === 0) {
       const records = res.data?.records || []
       if (loadMore) {
@@ -312,7 +311,7 @@ const handlePublish = async () => {
     message.warning({ content: '请输入内容', duration: 2.5, closable: true, onClick: () => message.destroy() })
     return
   }
-  
+
   try {
     const { data: res } = await addPost({
       title: '',
@@ -320,7 +319,7 @@ const handlePublish = async () => {
       tags: [],
       type: 'community'
     })
-    
+
     if (res.code === 0) {
       message.success({ content: '发布成功', duration: 2.5, closable: true, onClick: () => message.destroy() })
       postContent.value = ''
@@ -348,7 +347,7 @@ const handleEmojiClick = (event: Event) => {
 // 选择表情
 const selectEmoji = (emoji: string) => {
   postContent.value += emoji
-  
+
   // 添加到最近使用
   if (!recentEmojis.value.includes(emoji)) {
     recentEmojis.value.unshift(emoji)
@@ -356,7 +355,7 @@ const selectEmoji = (emoji: string) => {
       recentEmojis.value = recentEmojis.value.slice(0, 8)
     }
   }
-  
+
   showEmojiPicker.value = false
 }
 
@@ -436,7 +435,7 @@ const formatTime = (time: string | undefined) => {
   const date = new Date(time)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   if (diff < 60000) return '刚刚'
   if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
@@ -467,9 +466,9 @@ const handleSearch = async () => {
       const content = (post.content || '').toLowerCase()
       const userName = (post.user?.userName || '').toLowerCase()
       const tags = parseTags(post.tags).join(' ').toLowerCase()
-      
-      return title.includes(keyword) || 
-             content.includes(keyword) || 
+
+      return title.includes(keyword) ||
+             content.includes(keyword) ||
              userName.includes(keyword) ||
              tags.includes(keyword)
     })
@@ -893,25 +892,25 @@ onUnmounted(() => {
   .community-page {
     padding: 0 12px;
   }
-  
+
   .publish-tabs {
     padding: 12px 16px 0;
   }
-  
+
   .publish-input {
     padding: 12px 16px 16px;
   }
-  
+
   .nav-tabs {
     padding: 8px 16px;
     overflow-x: auto;
   }
-  
+
   .nav-tab {
     margin-right: 16px;
     white-space: nowrap;
   }
-  
+
   .post-item {
     padding: 16px;
   }
