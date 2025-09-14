@@ -15,6 +15,7 @@ import com.lgk.lgkaicodeservice.model.vo.UserVO;
 import com.mybatisflex.core.paginate.Page;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -197,6 +198,26 @@ public class UserController {
         return ResultUtils.success(userSignInRecord);
     }
 
+
+    /**
+     * 更新个人信息
+     *
+     * @param userUpdateMyRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/update/my")
+    public BaseResponse<Boolean> updateMyUser(@RequestBody UserUpdateMyRequest userUpdateMyRequest,
+                                              HttpServletRequest request) {
+        if (userUpdateMyRequest == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR);
+        }
+        User loginUser = userService.getLoginUser(request);
+        BeanUtils.copyProperties(userUpdateMyRequest, loginUser);
+        boolean result = userService.updateById(loginUser);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
+        return ResultUtils.success(true);
+    }
 
 }
 
