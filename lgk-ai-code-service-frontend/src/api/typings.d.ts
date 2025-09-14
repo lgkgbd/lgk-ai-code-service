@@ -109,6 +109,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseSearchVO = {
+    code?: number
+    data?: SearchVO
+    message?: string
+  }
+
   type BaseResponseString = {
     code?: number
     data?: string
@@ -291,6 +297,11 @@ declare namespace API {
     optimizeCountQuery?: boolean
   }
 
+  type Picture = {
+    title?: string
+    url?: string
+  }
+
   type PostAddRequest = {
     title?: string
     content?: string
@@ -341,6 +352,22 @@ declare namespace API {
 
   type removeParams = {
     id: number
+  }
+
+  type SearchRequest = {
+    pageNum?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+    searchText?: string
+    type?: string
+  }
+
+  type SearchVO = {
+    videoList?: Video[]
+    postList?: PostVO[]
+    pictureList?: Picture[]
+    dataList?: Record<string, any>[]
   }
 
   type ServerSentEventString = true
@@ -428,6 +455,19 @@ declare namespace API {
     userProfile?: string
     userRole?: string
     createTime?: string
+  }
+
+  type Video = {
+    type?: string
+    author?: string
+    arcurl?: string
+    title?: string
+    description?: string
+    pic?: string
+    play?: number
+    videoReview?: number
+    tag?: string
+    duration?: string
   }
 
   type WorkflowContext = {
