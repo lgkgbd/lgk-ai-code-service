@@ -23,12 +23,13 @@
         <div class="post-card">
           <!-- Post Title -->
           <h1 v-if="post.title" class="post-title">{{ post.title }}</h1>
-          
+
           <!-- Post Meta -->
           <div class="post-meta-info">
             <span class="username">{{ post.user?.userName || '匿名用户' }}</span>
             <span class="post-time">{{ formatTime(post.createTime) }}</span>
             <span class="view-count">阅读 {{ post.viewNum || 0 }}</span>
+            <a-button v-if="isAuthor" type="link" @click="handleEdit">编辑</a-button>
           </div>
 
           <!-- Post Content -->
@@ -109,7 +110,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { getPostVoById } from '@/api/postController'
 import { showError, showSuccess, showWarning } from '@/utils/message'
 import { marked } from 'marked'
+import { useLoginUserStore } from '@/stores/loginUser.ts'
+import { storeToRefs } from 'pinia'
 
+const loginUserStore = useLoginUserStore()
 const route = useRoute()
 const router = useRouter()
 
@@ -184,6 +188,24 @@ const formattedContent = computed(() => {
   }
   return marked(post.value.content)
 })
+
+// 判断当前用户是否为作者
+const isAuthor = computed(() => {
+  if (!post.value || !loginUserStore.loginUser) {
+    return false
+  }
+  return post.value.userId === loginUserStore.loginUser.id
+})
+
+// 编辑处理
+const handleEdit = () => {
+  if (post.value) {
+    router.push({
+      path: '/write-post',
+      query: { id: post.value.id }
+    })
+  }
+}
 
 
 // 点赞处理
