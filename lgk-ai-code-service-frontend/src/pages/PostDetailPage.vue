@@ -90,7 +90,7 @@
     <a-spin size="large" />
     <p>加载中...</p>
   </div>
-  
+
   <div v-else class="error-container">
     <a-result
       status="404"
@@ -111,7 +111,6 @@ import { getPostVoById } from '@/api/postController'
 import { showError, showSuccess, showWarning } from '@/utils/message'
 import { marked } from 'marked'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
-import { storeToRefs } from 'pinia'
 
 const loginUserStore = useLoginUserStore()
 const route = useRoute()
@@ -136,7 +135,7 @@ const fetchPostDetail = async () => {
   try {
     isLoading.value = true
     const { data: res } = await getPostVoById({ id: postId })
-    
+
     if (res?.code === 0 && res.data) {
       post.value = res.data
     } else {
@@ -158,12 +157,12 @@ const formatTime = (time: string | undefined) => {
   const date = new Date(time)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   if (diff < 60000) return '刚刚'
   if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
   if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
   if (diff < 2592000000) return `${Math.floor(diff / 86400000)}天前`
-  
+
   return date.toLocaleDateString()
 }
 
@@ -201,8 +200,8 @@ const isAuthor = computed(() => {
 const handleEdit = () => {
   if (post.value) {
     router.push({
-      path: '/write-post',
-      query: { id: post.value.id }
+      path: '/post/write',
+      query: { id: route.params.id as string }
     })
   }
 }
@@ -258,7 +257,7 @@ const handleComment = () => {
     showWarning('请输入评论内容')
     return
   }
-  
+
   // TODO: 实现评论功能
   showSuccess('评论功能开发中...')
   commentContent.value = ''
