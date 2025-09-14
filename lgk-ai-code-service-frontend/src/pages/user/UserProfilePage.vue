@@ -9,6 +9,7 @@
           <h2>{{ loginUser.userName || '未命名用户' }}</h2>
           <p class="sub">账号：{{ loginUser.userAccount || '-' }}</p>
         </div>
+        <a-button @click="showEditModal" class="edit-btn">编辑</a-button>
       </div>
 
       <div class="body">
@@ -56,6 +57,33 @@
         </div>
       </div>
     </div>
+    <a-modal v-model:visible="isModalVisible" title="编辑个人信息" @ok="handleOk" @cancel="handleCancel" :maskClosable="false">
+      <a-form :model="editableUser" layout="vertical">
+        <a-form-item label="头像">
+          <a-upload
+            name="file"
+            list-type="picture-card"
+            class="avatar-uploader"
+            :show-upload-list="false"
+            :customRequest="handleAvatarUpload"
+            :before-upload="() => !uploading"
+          >
+            <img v-if="editableUser.userAvatar" :src="editableUser.userAvatar" alt="avatar" style="width: 100%; border-radius: 50%;" />
+            <div v-else>
+              <loading-outlined v-if="uploading"></loading-outlined>
+              <plus-outlined v-else></plus-outlined>
+              <div class="ant-upload-text">上传</div>
+            </div>
+          </a-upload>
+        </a-form-item>
+        <a-form-item label="用户昵称" required>
+          <a-input v-model:value="editableUser.userName" placeholder="请输入新的昵称" />
+        </a-form-item>
+        <a-form-item label="个性签名">
+          <a-textarea v-model:value="editableUser.userProfile" :rows="3" placeholder="介绍一下自己吧~" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -63,10 +91,64 @@
 import { storeToRefs } from 'pinia'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { onMounted, ref } from 'vue'
-import { getLoginUser, getUserSignInRecord } from '@/api/userController.ts'
+import { getLoginUser, getUserSignInRecord, updateUser } from '@/api/userController.ts'
+import { uploadFile } from '@/api/fileController.ts'
+import { message, UploadProps } from 'ant-design-vue'
+import { PlusOutlined, LoadingOutlined } from '@ant-design/icons-vue'
 
 const loginUserStore = useLoginUserStore()
 const { loginUser } = storeToRefs(loginUserStore)
+
+const isModalVisible = ref(false)
+const editableUser = ref<API.UserUpdateMyRequest>({})
+const uploading = ref(false)
+
+const showEditModal = () => {
+  editableUser.value = { ...loginUser.value }
+  isModalVisible.value = true
+}
+
+const handleCancel = () => {
+  isModalVisible.value = false
+}
+
+const handleOk = async () => {
+  try {
+    const res = await updateUser(editableUser.value)
+    if (res.data.code === 0) {
+      message.success('更新成功')
+      // 重新获取用户信息并更新 store
+      const userRes = await getLoginUser()
+      if (userRes.data.code === 0 && userRes.data.data) {
+        loginUserStore.setLoginUser(userRes.data.data)
+      }
+      isModalVisible.value = false
+    } else {
+      message.error('更新失败: ' + res.data.message)
+    }
+  } catch (e) {
+    message.error('更新失败')
+  }
+}
+
+const handleAvatarUpload: UploadProps['customRequest'] = async ({ file }) => {
+  uploading.value = true
+  const hide = message.loading('正在上传...', 0)
+  try {
+    const res = await uploadFile({ biz: 'user_avatar' }, file as File)
+    if (res.data.code === 0 && res.data.data) {
+      editableUser.value.userAvatar = res.data.data
+      message.success('上传成功')
+    } else {
+      message.error('上传失败: ' + res.data.message)
+    }
+  } catch (e) {
+    message.error('上传失败')
+  } finally {
+    uploading.value = false
+    hide()
+  }
+}
 
 const currentYear = new Date().getFullYear()
 
@@ -173,6 +255,13 @@ onMounted(async () => {
   gap: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid #f5f5f5;
+  position: relative;
+}
+
+.edit-btn {
+  position: absolute;
+  top: 24px;
+  right: 24px;
 }
 
 .info h2 {
@@ -278,5 +367,5 @@ onMounted(async () => {
 .calendar-scroll {
   overflow-x: auto;
 }
-
 </style>
+
