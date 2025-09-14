@@ -5,6 +5,7 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.lgk.lgkaicodeservice.model.entity.Video;
+import com.lgk.lgkaicodeservice.utils.RandomUserAgentGeneratorUtil;
 import com.mybatisflex.core.paginate.Page;
 import org.springframework.stereotype.Service;
 
@@ -23,10 +24,11 @@ public class VideoDataSource implements DataSource {
 
         // 1. 获取数据
         String url = String.format("https://api.bilibili.com/x/web-interface/wbi/search/type?category_id=&search_type=video&page=%d&page_size=%d&keyword=%s", pageNum, pageSize, searchText);
+        String userAgent = RandomUserAgentGeneratorUtil.generate();
         String result = HttpRequest
                 .get(url)
                 .cookie()  // 添加单个 cookie
-                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .header("User-Agent", userAgent)
                 .header("Referer", "https://www.bilibili.com/")
                 .header("Origin", "https://www.bilibili.com")
                 .execute()
