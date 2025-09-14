@@ -1,5 +1,6 @@
 package com.lgk.lgkaicodeservice.common;
 
+import com.lgk.lgkaicodeservice.constant.CommonConstant;
 import lombok.Data;
 
 @Data
@@ -8,12 +9,12 @@ public class PageRequest {
     /**
      * 当前页号
      */
-    private int pageNum = 1;
+    private long pageNum = 1;
 
     /**
      * 页面大小
      */
-    private int pageSize = 10;
+    private long pageSize = 10;
 
     /**
      * 排序字段
@@ -23,5 +24,5 @@ public class PageRequest {
     /**
      * 排序顺序（默认降序）
      */
-    private String sortOrder = "descend";
+    private String sortOrder = CommonConstant.SORT_ORDER_DESC;
 }

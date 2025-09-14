@@ -139,8 +139,8 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
     @Override
     public Page<PostVO> listPostVOByPage(PostQueryRequest postQueryRequest) {
-        int pageNum = postQueryRequest.getPageNum();
-        int pageSize = postQueryRequest.getPageSize();
+        long pageNum = postQueryRequest.getPageNum();
+        long pageSize = postQueryRequest.getPageSize();
         
         // 构建查询条件
         QueryWrapper queryWrapper = QueryWrapper.create()
