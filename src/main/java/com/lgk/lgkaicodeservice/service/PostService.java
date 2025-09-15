@@ -73,4 +73,12 @@ public interface PostService extends IService<Post> {
      */
     void incrementViewCountAsync(Long postId);
 
+    /**
+     * 从 ES 查询
+     *
+     * @param postQueryRequest
+     * @return
+     */
+    Page<Post> searchFromEs(PostQueryRequest postQueryRequest);
+
 }

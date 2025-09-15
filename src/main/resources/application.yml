@@ -23,7 +23,10 @@ spring:
     store-type: redis
     # session 30 天过期
     timeout: 2592000
-
+  elasticsearch:
+    uris: http://localhost:9200
+#    username: root
+#    password: 123456
 server:
   port: 8123
   servlet:

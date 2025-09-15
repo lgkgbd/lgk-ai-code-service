@@ -2,14 +2,17 @@ package com.lgk.lgkaicodeservice.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.json.JSONUtil;
+import co.elastic.clients.elasticsearch._types.SortOptions;
+import co.elastic.clients.elasticsearch._types.SortOrder;
+import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import com.lgk.lgkaicodeservice.constant.CommonConstant;
+import com.lgk.lgkaicodeservice.model.dto.post.PostEsDTO;
 import com.lgk.lgkaicodeservice.model.entity.User;
 import com.lgk.lgkaicodeservice.model.vo.UserVO;
 import com.lgk.lgkaicodeservice.service.UserService;
-import com.mybatisflex.core.constant.SqlOperator;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.update.UpdateChain;
-import com.mybatisflex.core.update.UpdateWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
 import com.lgk.lgkaicodeservice.exception.ThrowUtils;
@@ -21,13 +24,22 @@ import com.lgk.lgkaicodeservice.mapper.PostMapper;
 import com.lgk.lgkaicodeservice.model.vo.PostVO;
 import com.lgk.lgkaicodeservice.service.PostService;
 import jakarta.annotation.Resource;
-import jodd.util.StringUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
+import org.springframework.data.elasticsearch.client.elc.NativeQuery;
+import org.springframework.data.elasticsearch.client.elc.NativeQueryBuilder;
+import org.springframework.data.elasticsearch.core.SearchHit;
+import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 
@@ -38,10 +50,14 @@ import java.util.stream.Collectors;
  * @author <a href="https://github.com/lgkgbd">程序员lgk</a>
  */
 @Service
+@Slf4j
 public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements PostService {
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private ElasticsearchTemplate elasticsearchTemplate;
 
     @Override
     public Long addPost(PostAddRequest postAddRequest, Long userId) {
@@ -249,6 +265,140 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
                 .update();
     }
 
+    @Override
+    public Page<Post> searchFromEs(PostQueryRequest postQueryRequest) {
+        Long id = postQueryRequest.getId();
+        Long notId = postQueryRequest.getNotId();
+        String searchText = postQueryRequest.getSearchText();
+        String title = postQueryRequest.getTitle();
+        String content = postQueryRequest.getContent();
+        List<String> tagList = postQueryRequest.getTags();
+        List<String> orTagList = postQueryRequest.getOrTags();
+        Long userId = postQueryRequest.getUserId();
+        Integer priority = postQueryRequest.getPriority();
+        // es 起始页为 0
+        long pageNum = postQueryRequest.getPageNum() - 1;
+        long pageSize = postQueryRequest.getPageSize();
+        String sortField = postQueryRequest.getSortField();
+        String sortOrder = postQueryRequest.getSortOrder();
+
+        // 1. 使用新的 Builder 构建布尔查询
+        BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+
+        // 2. 构建 filter 条件
+        // filter 条件被收集到一个 List 中，然后一次性添加到 bool 查询中
+        List<Query> filters = new ArrayList<>();
+        filters.add(Query.of(q -> q.term(t -> t.field("isDelete").value(0))));
+
+        if (id != null) {
+            filters.add(Query.of(q -> q.term(t -> t.field("id").value(id))));
+        }
+        if (userId != null) {
+            filters.add(Query.of(q -> q.term(t -> t.field("userId").value(userId))));
+        }
+
+        // 是否查询精选筛选
+//        if (priority != null && priority > 0) {
+//            filters.add(Query.of(q -> q.term(t -> t
+//                    .field("priority")
+//                    .value(priority)
+//            )));
+//        }
+
+        // 必须包含所有标签 (AND logic)
+        if (!CollectionUtils.isEmpty(tagList)) {
+            for (String tag : tagList) {
+                filters.add(Query.of(q -> q.term(t -> t.field("tags").value(tag))));
+            }
+        }
+
+        // 包含任何一个标签即可 (OR logic)
+        if (!CollectionUtils.isEmpty(orTagList)) {
+            BoolQuery.Builder orTagBoolQuery = new BoolQuery.Builder();
+            for (String tag : orTagList) {
+                orTagBoolQuery.should(Query.of(q -> q.term(t -> t.field("tags").value(tag))));
+            }
+            orTagBoolQuery.minimumShouldMatch("1");
+            filters.add(orTagBoolQuery.build()._toQuery());
+        }
+        boolQueryBuilder.filter(filters);
+
+
+        // 3. 构建 mustNot 条件
+        if (notId != null) {
+            boolQueryBuilder.mustNot(Query.of(q -> q.term(t -> t.field("id").value(notId))));
+        }
+
+        // 4. 构建 should 条件 (关键词、标题、内容检索)
+        // 所有的 should 条件被收集到一起，实现 OR 的效果
+        List<Query> shoulds = new ArrayList<>();
+        if (StringUtils.hasText(searchText)) {
+            shoulds.add(Query.of(q -> q.match(m -> m.field("title").query(searchText))));
+            shoulds.add(Query.of(q -> q.match(m -> m.field("content").query(searchText))));
+        }
+        if (StringUtils.hasText(title)) {
+            shoulds.add(Query.of(q -> q.match(m -> m.field("title").query(title))));
+        }
+        if (StringUtils.hasText(content)) {
+            shoulds.add(Query.of(q -> q.match(m -> m.field("content").query(content))));
+        }
+
+        if (!shoulds.isEmpty()) {
+            boolQueryBuilder.should(shoulds);
+            boolQueryBuilder.minimumShouldMatch("1");
+        }
+
+        // 5. 构建排序
+        List<SortOptions> sorts = new ArrayList<>();
+        if (StringUtils.hasText(sortField)) {
+            // 使用 lambda 表达式构建排序选项
+            sorts.add(SortOptions.of(s -> s.field(f -> f
+                    .field(sortField)
+                    .order(CommonConstant.SORT_ORDER_ASC.equals(sortOrder) ? SortOrder.Asc : SortOrder.Desc)
+            )));
+        }
+        // 如果没有指定排序字段，Elasticsearch 默认会按分数 (_score) 排序，所以不需要像旧代码一样显式添加 scoreSort()
+
+        // 6. 分页 (保持不变)
+        PageRequest pageRequest = PageRequest.of((int) pageNum, (int) pageSize);
+
+        // 7. 构造查询 (使用 NativeQueryBuilder)
+        NativeQuery searchQuery = new NativeQueryBuilder()
+                .withQuery(boolQueryBuilder.build()._toQuery())
+                .withPageable(pageRequest)
+                .withSort(sorts) // withSort 现在接收 List<SortOptions>
+                .build();
+
+        // 8. 执行查询 (方法签名保持不变)
+        SearchHits<PostEsDTO> searchHits = elasticsearchTemplate.search(searchQuery, PostEsDTO.class);
+
+        Page<Post> page = new Page<>();
+        page.setTotalRow(searchHits.getTotalHits()); //TODO 需要验证 这个是总数吗？
+        List<Post> resourceList = new ArrayList<>();
+
+        // TODO 查出结果后，从 db 获取最新动态数据（比如点赞数、收藏数、浏览数）
+        if (searchHits.hasSearchHits()){
+            List<SearchHit<PostEsDTO>> searchHitList = searchHits.getSearchHits();
+            List<Long> postIdList = searchHitList.stream().map(searchHit -> searchHit.getContent().getId())
+                    .collect(Collectors.toList());
+            // 从数据库中取出更完整的数据
+            List<Post> postList = this.getMapper().selectListByIds(postIdList); //TODO 需要验证
+            if(postList != null && postList.size() > 0) {
+                Map<Long, List<Post>> idPostMap = postList.stream().collect(Collectors.groupingBy(Post::getId));
+                postIdList.forEach(postId -> {
+                    if (idPostMap.containsKey(postId)) {
+                        resourceList.add(idPostMap.get(postId).get(0));
+                    } else {
+                        //从 es 中删除 db 以物理删除的数据
+                        String delete = elasticsearchTemplate.delete(String.valueOf(postId), PostEsDTO.class);//TODO    这里可以改成批量删除
+                        log.info("delete post {}", delete);
+                    }
+                });
+            }
+        }
+        page.setRecords(resourceList);
+        return page;
+    }
 
 
     /**
