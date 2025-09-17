@@ -103,3 +103,24 @@ pexels:
 dashscope:
   api-key: <Your API Key>
   image-model: wan2.2-t2i-flash
+
+# Canal 配置
+canal:
+  host: localhost
+  port: 11111
+  destination: example
+  username: ""
+  password: ""
+  subscribe: "lgk_ai_code_service.post"
+  batch-size: 1000
+  enabled: true
+  empty-count: 120
+  sleep-time: 1000
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

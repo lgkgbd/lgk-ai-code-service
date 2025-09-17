@@ -37,9 +37,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -351,23 +349,26 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         // 5. 构建排序
         List<SortOptions> sorts = new ArrayList<>();
         if (StringUtils.hasText(sortField)) {
-            // 使用 lambda 表达式构建排序选项
             sorts.add(SortOptions.of(s -> s.field(f -> f
                     .field(sortField)
                     .order(CommonConstant.SORT_ORDER_ASC.equals(sortOrder) ? SortOrder.Asc : SortOrder.Desc)
             )));
         }
-        // 如果没有指定排序字段，Elasticsearch 默认会按分数 (_score) 排序，所以不需要像旧代码一样显式添加 scoreSort()
 
-        // 6. 分页 (保持不变)
+        // 6. 分页
         PageRequest pageRequest = PageRequest.of((int) pageNum, (int) pageSize);
 
-        // 7. 构造查询 (使用 NativeQueryBuilder)
-        NativeQuery searchQuery = new NativeQueryBuilder()
+        // 7. 构造查询
+        NativeQueryBuilder queryBuilder = new NativeQueryBuilder()
                 .withQuery(boolQueryBuilder.build()._toQuery())
-                .withPageable(pageRequest)
-                .withSort(sorts) // withSort 现在接收 List<SortOptions>
-                .build();
+                .withPageable(pageRequest);
+
+        // 只有当 sorts 不为空时才添加排序
+        if (!sorts.isEmpty()) {
+            queryBuilder.withSort(sorts);
+        }
+
+        NativeQuery searchQuery = queryBuilder.build();
 
         // 8. 执行查询 (方法签名保持不变)
         SearchHits<PostEsDTO> searchHits = elasticsearchTemplate.search(searchQuery, PostEsDTO.class);
@@ -398,6 +399,55 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         }
         page.setRecords(resourceList);
         return page;
+    }
+
+    @Override
+    public Page<PostVO> getPostVOPage(Page<Post> postPage) {
+        List<Post> postList = postPage.getRecords();
+        Page<PostVO> postVOPage = new Page<>(postPage.getPageNumber(), postPage.getPageSize(), postPage.getTotalRow());
+        if (CollectionUtils.isEmpty(postList)) {
+            return postVOPage;
+        }
+        // 1. 关联查询用户信息
+        Set<Long> userIdSet = postList.stream().map(Post::getUserId).collect(Collectors.toSet());
+        Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
+                .collect(Collectors.groupingBy(User::getId));
+        // 2. 已登录，获取用户点赞、收藏状态
+//        Map<Long, Boolean> postIdHasThumbMap = new HashMap<>();
+//        Map<Long, Boolean> postIdHasFavourMap = new HashMap<>();
+//        User loginUser = userService.getLoginUserPermitNull(request);
+//        if (loginUser != null) {
+//            Set<Long> postIdSet = postList.stream().map(Post::getId).collect(Collectors.toSet());
+//            loginUser = userService.getLoginUser(request);
+//            // 获取点赞
+//            QueryWrapper<PostThumb> postThumbQueryWrapper = new QueryWrapper<>();
+//            postThumbQueryWrapper.in("postId", postIdSet);
+//            postThumbQueryWrapper.eq("userId", loginUser.getId());
+//            List<PostThumb> postPostThumbList = postThumbMapper.selectList(postThumbQueryWrapper);
+//            postPostThumbList.forEach(postPostThumb -> postIdHasThumbMap.put(postPostThumb.getPostId(), true));
+//            // 获取收藏
+//            QueryWrapper<PostFavour> postFavourQueryWrapper = new QueryWrapper<>();
+//            postFavourQueryWrapper.in("postId", postIdSet);
+//            postFavourQueryWrapper.eq("userId", loginUser.getId());
+//            List<PostFavour> postFavourList = postFavourMapper.selectList(postFavourQueryWrapper);
+//            postFavourList.forEach(postFavour -> postIdHasFavourMap.put(postFavour.getPostId(), true));
+//        }
+        // 填充信息
+        List<PostVO> postVOList = postList.stream().map(post -> {
+            PostVO postVO = PostVO.objToVo(post);
+            Long userId = post.getUserId();
+            User user = null;
+            if (userIdUserListMap.containsKey(userId)) {
+                user = userIdUserListMap.get(userId).get(0);
+            }
+            postVO.setUser(userService.getUserVO(user));
+//            postVO.setHasThumb(postIdHasThumbMap.getOrDefault(post.getId(), false));
+//            postVO.setHasFavour(postIdHasFavourMap.getOrDefault(post.getId(), false));
+            // TODO 浏览数量
+            return postVO;
+        }).collect(Collectors.toList());
+        postVOPage.setRecords(postVOList);
+        return postVOPage;
     }
 
 

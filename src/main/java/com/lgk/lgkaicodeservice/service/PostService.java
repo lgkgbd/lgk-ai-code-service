@@ -81,4 +81,12 @@ public interface PostService extends IService<Post> {
      */
     Page<Post> searchFromEs(PostQueryRequest postQueryRequest);
 
+    /**
+     * 分页获取帖子封装
+     *
+     * @param postPage
+     * @return
+     */
+    Page<PostVO> getPostVOPage(Page<Post> postPage);
+
 }
