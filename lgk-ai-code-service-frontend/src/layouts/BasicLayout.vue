@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { reactive, computed } from 'vue'
+import { useSearchStore } from '@/stores/searchStore'
 import { useRoute } from 'vue-router'
 import GlobalHeader from '@/components/GlobalHeader.vue'
 import GlobalFooter from '@/components/GlobalFooter.vue'
 import ACCESS_ENUM from '@/access/accessEnum'
 
 const route = useRoute()
+const searchStore = useSearchStore()
 
 // 检查是否是聊天页面
 const isChatPage = computed(() => {
   return route.path.includes('/app/chat/')
 })
 
-const hideHeaderSearch = computed(() => route.meta.hideHeaderSearch)
+const hideHeaderSearch = computed(() => !!route.meta.hideHeaderSearch || !searchStore.showHeaderSearch)
 
 type MenuItem = {
   key: string

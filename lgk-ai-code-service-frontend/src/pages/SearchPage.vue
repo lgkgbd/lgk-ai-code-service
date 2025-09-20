@@ -8,11 +8,7 @@
       @search="onSearch"
     />
     <a-tabs v-model:activeKey="activeKey" @change="onTabChange">
-      <a-tab-pane key="all" tab="综合">
-        <PostList :post-list="postList" />
-        <PictureList :picture-list="pictureList" />
-        <VideoList :video-list="videoList" />
-      </a-tab-pane>
+
       <a-tab-pane key="post" tab="帖子">
         <PostList :post-list="postList" />
       </a-tab-pane>
@@ -28,6 +24,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted } from 'vue'
+import { useSearchStore } from '@/stores/searchStore'
 import { useRoute, useRouter } from 'vue-router'
 import PostList from '@/components/search/PostList.vue'
 import PictureList from '@/components/search/PictureList.vue'
@@ -37,9 +34,10 @@ import type { PostVO, Picture, Video, SearchVO } from '@/api/models'
 
 const route = useRoute()
 const router = useRouter()
+const searchStore = useSearchStore()
 
 const searchText = ref('')
-const activeKey = ref('all')
+const activeKey = ref('post')
 
 const postList = ref<PostVO[]>([])
 const pictureList = ref<Picture[]>([])
@@ -48,7 +46,7 @@ const videoList = ref<Video[]>([])
 const pageNum = ref(1)
 const loading = ref(false)
 const noMoreData = ref(false)
-const currentSearchParams = ref({ searchText: '', type: 'all' })
+const currentSearchParams = ref({ searchText: '', type: 'post' })
 
 const loadData = async (params: any, loadMore = false) => {
   if (loading.value || (loadMore && noMoreData.value)) {
@@ -84,25 +82,7 @@ const loadData = async (params: any, loadMore = false) => {
 
       let newDataReceived = false
 
-      if (type === 'all') {
-        const newPosts = searchVO.postList || []
-        const newPictures = searchVO.pictureList || []
-        const newVideos = (searchVO.videoList || []).map(mapVideoData)
 
-        if (newPosts.length > 0 || newPictures.length > 0 || newVideos.length > 0) {
-          newDataReceived = true
-        }
-
-        if (loadMore) {
-          postList.value.push(...newPosts)
-          pictureList.value.push(...newPictures)
-          videoList.value.push(...newVideos.slice(0, 9))
-        } else {
-          postList.value = newPosts
-          pictureList.value = newPictures
-          videoList.value = newVideos.slice(0, 9)
-        }
-      } else {
         const dataList = searchVO.dataList || []
         if (dataList.length > 0) {
           newDataReceived = true
@@ -119,7 +99,6 @@ const loadData = async (params: any, loadMore = false) => {
           else if (type === 'picture') pictureList.value = mappedDataList
           else if (type === 'video') videoList.value = mappedDataList.slice(0, 9)
         }
-      }
 
       if (!newDataReceived) {
         noMoreData.value = true
@@ -145,10 +124,13 @@ const handleScroll = () => {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll)
+  searchStore.setShowHeaderSearch(false)
 })
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
+  searchStore.setShowHeaderSearch(true)
+  searchStore.setHeaderSearchText('')
 })
 
 watch(
@@ -159,7 +141,7 @@ watch(
 
     const params = {
       searchText: querySearchText || '',
-      type: queryType || 'all',
+      type: queryType || 'post',
     }
 
     searchText.value = params.searchText

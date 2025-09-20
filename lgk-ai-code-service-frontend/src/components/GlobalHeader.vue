@@ -21,7 +21,7 @@
       </div>
       <a-input-search
         v-if="!props.hideSearch"
-        v-model:value="searchText"
+        v-model:value="searchStore.headerSearchText"
         placeholder="搜索"
         style="width: 200px; margin-left: 16px"
         @search="onSearch"
@@ -62,9 +62,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
+import { useSearchStore } from '@/stores/searchStore.ts'
 import { LogoutOutlined, UserOutlined } from '@ant-design/icons-vue'
 import { userLogout } from '@/api/userController.ts'
 import { message } from 'ant-design-vue'
@@ -83,9 +84,18 @@ const props = defineProps<{
 }>()
 
 const loginUserStore = useLoginUserStore()
+const searchStore = useSearchStore()
 const route = useRoute()
 const router = useRouter()
-const searchText = ref(route.query.text || '')
+
+watch(
+  () => route.query.text,
+  (newText) => {
+    const text = Array.isArray(newText) ? newText[0] : newText
+    searchStore.setHeaderSearchText(text || '')
+  },
+  { immediate: true }
+)
 
 // 前往个人主页
 const goProfile = () => {
