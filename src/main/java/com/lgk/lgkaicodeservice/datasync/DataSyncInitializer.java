@@ -38,12 +38,10 @@ public class DataSyncInitializer {
         try {
             // 可选：应用启动时进行一次全量同步
             // 注释掉下面的代码如果不需要启动时全量同步
-            /*
             log.info("执行启动时全量同步...");
             long syncCount = postDataSyncService.syncAllPostsToEs();
             log.info("启动时全量同步完成，同步数据条数: {}", syncCount);
-            */
-            
+
             log.info("数据同步模块初始化完成");
         } catch (Exception e) {
             log.error("数据同步模块初始化失败", e);

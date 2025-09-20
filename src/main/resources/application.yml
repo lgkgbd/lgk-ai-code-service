@@ -25,8 +25,9 @@ spring:
     timeout: 2592000
   elasticsearch:
     uris: http://localhost:9200
-#    username: root
-#    password: 123456
+    username: elastic
+    password: 123456
+
 server:
   port: 8123
   servlet:
@@ -114,7 +115,6 @@ canal:
   subscribe: "lgk_ai_code_service.post"
   batch-size: 1000
   enabled: true
-  empty-count: 120
   sleep-time: 1000
 management:
   endpoints:

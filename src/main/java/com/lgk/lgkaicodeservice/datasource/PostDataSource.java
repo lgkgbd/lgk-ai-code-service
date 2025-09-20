@@ -1,6 +1,7 @@
 package com.lgk.lgkaicodeservice.datasource;
 
 import com.lgk.lgkaicodeservice.model.dto.post.PostQueryRequest;
+import com.lgk.lgkaicodeservice.model.entity.Post;
 import com.lgk.lgkaicodeservice.model.vo.PostVO;
 import com.lgk.lgkaicodeservice.service.PostService;
 import com.mybatisflex.core.paginate.Page;
@@ -22,7 +23,7 @@ public class PostDataSource implements DataSource<PostVO>{
         postQueryRequest.setPageSize(pageSize);
 
         //TODO 后面改成从 es 中查询，先查静态数据，后面补上动态的数据（点赞、收藏、浏览等等）
-
-        return postService.listPostVOByPage(postQueryRequest);
+        Page<Post> postPage = postService.searchFromEs(postQueryRequest);
+        return postService.getPostVOPage(postPage);
     }
 }

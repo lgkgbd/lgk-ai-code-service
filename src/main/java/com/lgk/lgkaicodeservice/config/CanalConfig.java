@@ -55,11 +55,6 @@ public class CanalConfig {
     private Boolean enabled = true;
 
     /**
-     * 空数据重试次数
-     */
-    private Integer emptyCount = 120;
-
-    /**
      * 空数据等待时间（毫秒）
      */
     private Long sleepTime = 1000L;
