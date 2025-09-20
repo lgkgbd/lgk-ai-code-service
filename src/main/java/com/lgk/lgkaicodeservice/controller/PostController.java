@@ -191,41 +191,6 @@ public class PostController {
         return ResultUtils.success(postVOPage);
     }
 
-//    /**
-//     * 点赞帖子
-//     *
-//     * @param postId 帖子id
-//     * @param request HTTP请求
-//     * @return 是否成功
-//     */
-//    @PostMapping("/thumb")
-//    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
-//    public BaseResponse<Boolean> thumbPost(@RequestParam Long postId, HttpServletRequest request) {
-//        ThrowUtils.throwIf(postId == null || postId <= 0, ErrorCode.PARAMS_ERROR);
-//
-//        User loginUser = userService.getLoginUser(request);
-//        Boolean result = postService.thumbPost(postId, loginUser.getId());
-//
-//        return ResultUtils.success(result);
-//    }
-//
-//    /**
-//     * 收藏帖子
-//     *
-//     * @param postId 帖子id
-//     * @param request HTTP请求
-//     * @return 是否成功
-//     */
-//    @PostMapping("/favour")
-//    @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
-//    public BaseResponse<Boolean> favourPost(@RequestParam Long postId, HttpServletRequest request) {
-//        ThrowUtils.throwIf(postId == null || postId <= 0, ErrorCode.PARAMS_ERROR);
-//
-//        User loginUser = userService.getLoginUser(request);
-//        Boolean result = postService.favourPost(postId, loginUser.getId());
-//
-//        return ResultUtils.success(result);
-//    }
 
     /**
      * 管理员分页获取帖子列表

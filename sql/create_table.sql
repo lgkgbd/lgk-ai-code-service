@@ -91,3 +91,35 @@ create table if not exists post
 -- 修改帖子表，新增总结字段,后面有时间就写一个添加玩之后的异步去给ai生成总结
 # ALTER TABLE post
 #     ADD COLUMN summary TEXT NULL COMMENT '总结';
+
+
+-- 点赞表（硬删除）
+create table if not exists thumb
+(
+    id         bigint auto_increment comment '点赞id' primary key,
+    type       tinyint                              not null comment '点赞类型',
+    targetId     bigint                             not null comment '目标id',
+    userId     bigint                             not null comment '创建用户id',
+    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+-- 唯一索引：保证一人一目标一类型只能有一条记录
+    unique index uniq_user_target (userId, type, targetId),
+-- 目标统计：快速查目标的点赞数
+    index idx_type_target (type, targetId),
+-- 用户点赞记录：快速查用户点过哪些
+    index idx_user_type (userId, type)
+) comment '点赞表';
+
+-- 帖子收藏表（硬删除）
+create table if not exists post_favour
+(
+    id         bigint auto_increment comment '帖子收藏id' primary key,
+    postId     bigint                             not null comment '帖子id',
+    userId     bigint                             not null comment '创建用户id',
+    createTime datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    index idx_postId (postId),
+    index idx_userId (userId)
+) comment '帖子收藏表';
+
+

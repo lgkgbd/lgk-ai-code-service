@@ -182,7 +182,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         String sortField = postQueryRequest.getSortField();
         String sortOrder = postQueryRequest.getSortOrder();
         if (StringUtils.hasText(sortField)) {
-            boolean isAsc = "ascend".equals(sortOrder);
+            boolean isAsc = CommonConstant.SORT_ORDER_ASC.equals(sortOrder);
             switch (sortField) {
                 case "createTime":
                     queryWrapper.orderBy(Post::getCreateTime, isAsc);
