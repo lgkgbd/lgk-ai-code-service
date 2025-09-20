@@ -14,6 +14,7 @@ import com.lgk.lgkaicodeservice.service.ThumbService;
 import jakarta.annotation.Resource;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 点赞表 服务层实现。
@@ -46,11 +47,12 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb>  implement
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class) //声明式事务管理的注解
     public int doThumbInner(ThumbTypeEnum type, long targetId, Long userId, ThumbHandler thumbHandler) {
         QueryWrapper thumbQueryWrapper = new QueryWrapper();
         thumbQueryWrapper.eq("type", type.getValue());
-        thumbQueryWrapper.eq("target_id", targetId);
-        thumbQueryWrapper.eq("user_id", userId);
+        thumbQueryWrapper.eq("targetId", targetId);
+        thumbQueryWrapper.eq("userId", userId);
         Thumb oldPostThumb = this.getOne(thumbQueryWrapper);
         boolean result;
         // 已点赞
