@@ -61,6 +61,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseInteger = {
+    code?: number
+    data?: number
+    message?: string
+  }
+
   type BaseResponseListInteger = {
     code?: number
     data?: number[]
@@ -309,14 +315,24 @@ declare namespace API {
     coverImage?: string
   }
 
+  type PostFavourAddRequest = {
+    postId?: number
+  }
+
   type PostQueryRequest = {
     pageNum?: number
     pageSize?: number
     sortField?: string
     sortOrder?: string
+    id?: number
+    notId?: number
     searchText?: string
+    title?: string
+    content?: string
     tags?: string[]
+    orTags?: string[]
     userId?: number
+    favourUserId?: number
     priority?: number
   }
 
@@ -342,6 +358,8 @@ declare namespace API {
     createTime?: string
     updateTime?: string
     priority?: number
+    hasThumb?: boolean
+    hasFavour?: boolean
   }
 
   type QualityResult = {
@@ -378,6 +396,11 @@ declare namespace API {
 
   type SseEmitter = {
     timeout?: number
+  }
+
+  type ThumbAddRequest = {
+    targetId?: number
+    type?: 'POST'
   }
 
   type uploadFileParams = {
