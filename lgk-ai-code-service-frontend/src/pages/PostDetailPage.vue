@@ -2,14 +2,24 @@
   <div class="post-detail-page-layout" v-if="!isLoading && post">
     <!-- Floating Action Bar -->
     <div class="floating-actions">
-      <a-button type="primary" shape="circle" class="action-btn" :class="{ active: post.hasThumb }" @click="handleLike">
+      <a-button 
+        :type="post.hasThumb ? 'primary' : 'default'" 
+        shape="circle" 
+        class="action-btn" 
+        @click="handleLike"
+      >
         👍
         <span class="count">{{ post.thumbNum || 0 }}</span>
       </a-button>
       <a-button shape="circle" class="action-btn" @click="scrollToComments">
         💬
       </a-button>
-      <a-button shape="circle" class="action-btn" :class="{ active: post.hasFavour }" @click="handleFavorite">
+      <a-button 
+        :type="post.hasFavour ? 'primary' : 'default'" 
+        shape="circle" 
+        class="action-btn" 
+        @click="handleFavorite"
+      >
         ⭐
         <span class="count">{{ post.favourNum || 0 }}</span>
       </a-button>
@@ -365,9 +375,7 @@ onMounted(() => {
   min-width: 18px;
   text-align: center;
 }
-.floating-actions .action-btn.active {
-  color: #1890ff;
-}
+
 
 .main-wrapper {
   display: flex;
