@@ -1,7 +1,7 @@
 <template>
   <div class="community-page">
     <!-- 顶部发布区域 -->
-    <div class="publish-section">
+    <div v-if="activeTab !== 'myposts' && activeTab !== 'favourites'" class="publish-section">
       <div class="publish-tabs">
         <a-button type="primary" class="tab-btn active">随便聊</a-button>
         <a-button type="default" class="tab-btn" @click="goToWriteArticle">写文章</a-button>
@@ -186,7 +186,9 @@
       </template>
 
       <div v-else-if="!isLoading && !searchKeyword" class="no-posts">
-        <p>暂无帖子，快来发布第一个吧！</p>
+        <p v-if="activeTab === 'myposts'">您还没有发布过帖子，快来发布第一个吧！</p>
+        <p v-else-if="activeTab === 'favourites'">您还没有收藏过帖子，快去收藏感兴趣的内容吧！</p>
+        <p v-else>暂无帖子，快来发布第一个吧！</p>
       </div>
 
       <!-- 加载更多提示 -->
@@ -213,9 +215,10 @@ import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
 import { SearchOutlined } from '@ant-design/icons-vue'
-import { listPostVoByPage, addPost } from '@/api/postController'
+import { listPostVoByPage, addPost, listMyPostVoByPage } from '@/api/postController'
 import { doThumb } from '@/api/thumbController'
-import { doPostFavour } from '@/api/postFavourController'
+import { doPostFavour, listMyFavourPostByPage } from '@/api/postFavourController'
+import { showSuccess, showError, showWarning } from '@/utils/message'
 
 const router = useRouter()
 
@@ -240,10 +243,12 @@ const recentEmojis = ref<string[]>(['👍', '😊', '😂', '❤️'])
 // 导航标签
 const activeTab = ref('recommend')
 const navTabs = [
+  { key: 'myposts', label: '帖子' },
   { key: 'follow', label: '关注' },
   { key: 'recommend', label: '推荐' },
   { key: 'featured', label: '精选' },
-  { key: 'hot', label: '热门' }
+  { key: 'hot', label: '热门' },
+  { key: 'favourites', label: '收藏' }
 ]
 
 // 帖子数据
@@ -263,6 +268,12 @@ const isSearching = ref(false)
 // 显示的帖子列表（搜索时显示搜索结果，否则显示全部帖子）
 const displayPosts = computed(() => {
   return searchKeyword.value ? searchResults.value : posts.value
+})
+
+// 当前标签页标题
+const currentTabLabel = computed(() => {
+  const tab = navTabs.find(t => t.key === activeTab.value)
+  return tab?.label || '推荐'
 })
 
 // 加载帖子
@@ -289,7 +300,22 @@ const loadPosts = async (loadMore = false) => {
       sortOrder: 'desc'
     }
 
-    const { data: res } = await listPostVoByPage(params)
+    let res: any
+
+    // 根据当前标签页选择不同的API
+    if (activeTab.value === 'myposts') {
+      // 获取我的帖子
+      const response = await listMyPostVoByPage(params)
+      res = response.data
+    } else if (activeTab.value === 'favourites') {
+      // 获取我的收藏
+      const response = await listMyFavourPostByPage(params)
+      res = response.data
+    } else {
+      // 获取所有帖子（推荐、关注、精选、热门等）
+      const response = await listPostVoByPage(params)
+      res = response.data
+    }
 
     if (res?.code === 0) {
       const records = res.data?.records || []
@@ -303,15 +329,15 @@ const loadPosts = async (loadMore = false) => {
       if (loadMore) pagination.current--
       console.error('API返回格式错误:', res)
       if (res?.message && res.message.toLowerCase() !== 'ok') {
-        message.error({ content: res.message, duration: 2.5, closable: true, onClick: () => message.destroy() })
+        showError(res.message)
       } else if (!res?.message && res?.code !== 0) {
-        message.error({ content: '加载帖子列表失败', duration: 2.5, closable: true, onClick: () => message.destroy() })
+        showError('加载帖子列表失败')
       }
     }
   } catch (error) {
     if (loadMore) pagination.current--
     console.error('加载帖子失败:', error)
-    message.error({ content: '网络错误，请稍后重试', duration: 2.5, closable: true, onClick: () => message.destroy() })
+    showError('网络错误，请稍后重试')
   } finally {
     isLoading.value = false
   }
@@ -320,7 +346,7 @@ const loadPosts = async (loadMore = false) => {
 // 发布帖子
 const handlePublish = async () => {
   if (!postContent.value.trim()) {
-    message.warning({ content: '请输入内容', duration: 2.5, closable: true, onClick: () => message.destroy() })
+    showWarning('请输入内容')
     return
   }
 
@@ -328,19 +354,18 @@ const handlePublish = async () => {
     const { data: res } = await addPost({
       title: '',
       content: postContent.value,
-      tags: [],
-      type: 'community'
+      tags: []
     })
 
     if (res.code === 0) {
-      message.success({ content: '发布成功', duration: 2.5, closable: true, onClick: () => message.destroy() })
+      showSuccess('发布成功')
       postContent.value = ''
       loadPosts()
     } else {
-      message.error({ content: res.message || '发布失败', duration: 2.5, closable: true, onClick: () => message.destroy() })
+      showError(res.message || '发布失败')
     }
   } catch (error) {
-    message.error({ content: '发布失败', duration: 2.5, closable: true, onClick: () => message.destroy() })
+    showError('发布失败')
   }
 }
 
@@ -415,6 +440,12 @@ const emojiCategories = {
 const handleTabChange = (tabKey: string) => {
   activeTab.value = tabKey
   posts.value = [] // 立即清空以获得更好的用户体验
+  // 重置分页状态
+  pagination.current = 1
+  pagination.total = 0
+  // 清空搜索结果
+  searchKeyword.value = ''
+  searchResults.value = []
   loadPosts()
 }
 
@@ -486,7 +517,7 @@ const handleSearch = async () => {
     })
   } catch (error) {
     console.error('搜索失败:', error)
-    message.error('搜索失败，请稍后重试')
+    showError('搜索失败，请稍后重试')
   } finally {
     isSearching.value = false
   }
@@ -529,13 +560,13 @@ const handleThumb = async (post: API.PostVO) => {
       // 切换点赞状态
       post.hasThumb = !post.hasThumb
       post.thumbNum = (post.thumbNum || 0) + (post.hasThumb ? 1 : -1)
-      message.success({ content: post.hasThumb ? '点赞成功' : '取消点赞', duration: 1.5 })
+      showSuccess(post.hasThumb ? '点赞成功' : '取消点赞')
     } else {
-      message.error({ content: res?.message || '操作失败', duration: 2.5 })
+      showError(res?.message || '操作失败')
     }
   } catch (error) {
     console.error('点赞失败:', error)
-    message.error({ content: '网络错误，请稍后重试', duration: 2.5 })
+    showError('网络错误，请稍后重试')
   }
 }
 
@@ -552,13 +583,13 @@ const handleFavour = async (post: API.PostVO) => {
       // 切换收藏状态
       post.hasFavour = !post.hasFavour
       post.favourNum = (post.favourNum || 0) + (post.hasFavour ? 1 : -1)
-      message.success({ content: post.hasFavour ? '收藏成功' : '取消收藏', duration: 1.5 })
+      showSuccess(post.hasFavour ? '收藏成功' : '取消收藏')
     } else {
-      message.error({ content: res?.message || '操作失败', duration: 2.5 })
+      showError(res?.message || '操作失败')
     }
   } catch (error) {
     console.error('收藏失败:', error)
-    message.error({ content: '网络错误，请稍后重试', duration: 2.5 })
+    showError('网络错误，请稍后重试')
   }
 }
 
@@ -586,9 +617,9 @@ const handleShare = (post: API.PostVO) => {
 const copyToClipboard = (text: string) => {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(text).then(() => {
-      message.success({ content: '链接已复制到剪贴板', duration: 1.5 })
+      showSuccess('链接已复制到剪贴板')
     }).catch(() => {
-      message.error({ content: '复制失败', duration: 2.5 })
+      showError('复制失败')
     })
   } else {
     // 兼容旧浏览器
@@ -598,9 +629,9 @@ const copyToClipboard = (text: string) => {
     textArea.select()
     try {
       document.execCommand('copy')
-      message.success({ content: '链接已复制到剪贴板', duration: 1.5 })
+      showSuccess('链接已复制到剪贴板')
     } catch (err) {
-      message.error({ content: '复制失败', duration: 2.5 })
+      showError('复制失败')
     }
     document.body.removeChild(textArea)
   }
