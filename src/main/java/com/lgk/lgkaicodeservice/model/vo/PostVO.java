@@ -80,6 +80,16 @@ public class PostVO {
     private Integer priority;
 
     /**
+     * 是否已点赞
+     */
+    private Boolean hasThumb;
+
+    /**
+     * 是否已收藏
+     */
+    private Boolean hasFavour;
+
+    /**
      * 包装类转对象
      *
      * @param postVO

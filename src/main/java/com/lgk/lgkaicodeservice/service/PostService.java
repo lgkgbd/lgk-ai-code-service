@@ -1,12 +1,14 @@
 package com.lgk.lgkaicodeservice.service;
 
 import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.service.IService;
 import com.lgk.lgkaicodeservice.model.dto.post.PostAddRequest;
 import com.lgk.lgkaicodeservice.model.dto.post.PostQueryRequest;
 import com.lgk.lgkaicodeservice.model.dto.post.PostUpdateRequest;
 import com.lgk.lgkaicodeservice.model.entity.Post;
 import com.lgk.lgkaicodeservice.model.vo.PostVO;
+import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * 帖子表 服务层。
@@ -39,7 +41,7 @@ public interface PostService extends IService<Post> {
      * @param id 帖子id
      * @return 帖子VO
      */
-    PostVO getPostVO(Long id);
+    PostVO getPostVO(Long id, HttpServletRequest request);
 
     /**
      * 分页查询帖子VO
@@ -47,7 +49,7 @@ public interface PostService extends IService<Post> {
      * @param postQueryRequest 查询请求
      * @return 分页结果
      */
-    Page<PostVO> listPostVOByPage(PostQueryRequest postQueryRequest);
+    Page<PostVO> listPostVOByPage(PostQueryRequest postQueryRequest, HttpServletRequest request);
 
     /**
      * 点赞帖子
@@ -87,6 +89,13 @@ public interface PostService extends IService<Post> {
      * @param postPage
      * @return
      */
-    Page<PostVO> getPostVOPage(Page<Post> postPage);
+    Page<PostVO> getPostVOPage(Page<Post> postPage, HttpServletRequest request);
 
+    /**
+     * 获取查询条件
+     *
+     * @param postQueryRequest 发布查询请求
+     * @return {@link QueryWrapper}<{@link Post}>
+     */
+    QueryWrapper getQueryWrapper(PostQueryRequest postQueryRequest);
 }

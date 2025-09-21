@@ -6,8 +6,13 @@ import co.elastic.clients.elasticsearch._types.SortOptions;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.lgk.lgkaicodeservice.constant.CommonConstant;
+import com.lgk.lgkaicodeservice.mapper.PostFavourMapper;
+import com.lgk.lgkaicodeservice.mapper.ThumbMapper;
 import com.lgk.lgkaicodeservice.model.dto.post.PostEsDTO;
+import com.lgk.lgkaicodeservice.model.entity.PostFavour;
+import com.lgk.lgkaicodeservice.model.entity.Thumb;
 import com.lgk.lgkaicodeservice.model.entity.User;
+import com.lgk.lgkaicodeservice.model.enums.ThumbTypeEnum;
 import com.lgk.lgkaicodeservice.model.vo.UserVO;
 import com.lgk.lgkaicodeservice.service.UserService;
 import com.mybatisflex.core.paginate.Page;
@@ -24,7 +29,9 @@ import com.lgk.lgkaicodeservice.mapper.PostMapper;
 import com.lgk.lgkaicodeservice.model.vo.PostVO;
 import com.lgk.lgkaicodeservice.service.PostService;
 import jakarta.annotation.Resource;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.ObjectUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
@@ -53,6 +60,12 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private ThumbMapper thumbMapper;
+
+    @Resource
+    private PostFavourMapper postFavourMapper;
 
     @Resource
     private ElasticsearchTemplate elasticsearchTemplate;
@@ -142,23 +155,48 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     }
 
     @Override
-    public PostVO getPostVO(Long id) {
+    public PostVO getPostVO(Long id, HttpServletRequest request) {
         ThrowUtils.throwIf(id == null || id <= 0, ErrorCode.PARAMS_ERROR);
 
         Post post = this.getById(id);
         ThrowUtils.throwIf(post == null, ErrorCode.NOT_FOUND_ERROR, "帖子不存在");
 
-        return this.getPostVO(post);
+        return this.getPostVO(post,request);
     }
 
     @Override
-    public Page<PostVO> listPostVOByPage(PostQueryRequest postQueryRequest) {
+    public Page<PostVO> listPostVOByPage(PostQueryRequest postQueryRequest, HttpServletRequest request) {
         long pageNum = postQueryRequest.getPageNum();
         long pageSize = postQueryRequest.getPageSize();
         
         // 构建查询条件
+        QueryWrapper queryWrapper = getQueryWrapper(postQueryRequest);
+
+        // 分页查询
+        Page<Post> postPage = this.page(new Page<>(pageNum, pageSize), queryWrapper);
+
+        // 转换为VO
+        Page<PostVO> postVOPage = getPostVOPage(postPage, request);
+
+        return postVOPage;
+    }
+
+    /**
+     * 获取查询包装类
+     *
+     * @param postQueryRequest
+     * @return
+     */
+    @Override
+    public QueryWrapper getQueryWrapper(PostQueryRequest postQueryRequest) {
+
+        // 构建查询条件
         QueryWrapper queryWrapper = QueryWrapper.create()
                 .eq(Post::getIsDelete, 0);
+
+        if (postQueryRequest == null) {
+            return queryWrapper;
+        }
 
         // 模糊搜索标题和内容
         if (StringUtils.hasText(postQueryRequest.getSearchText())) {
@@ -205,20 +243,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         } else {
             queryWrapper.orderBy(Post::getCreateTime, false);
         }
-
-        // 分页查询
-        Page<Post> postPage = this.page(new Page<>(pageNum, pageSize), queryWrapper);
-
-        // 转换为VO
-        Page<PostVO> postVOPage = new Page<>();
-        BeanUtils.copyProperties(postPage, postVOPage);
-        
-        List<PostVO> postVOList = postPage.getRecords().stream()
-                .map(this::getPostVO)
-                .collect(Collectors.toList());
-        postVOPage.setRecords(postVOList);
-
-        return postVOPage;
+        return queryWrapper;
     }
 
     @Override
@@ -402,7 +427,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     }
 
     @Override
-    public Page<PostVO> getPostVOPage(Page<Post> postPage) {
+    public Page<PostVO> getPostVOPage(Page<Post> postPage, HttpServletRequest request) {
         List<Post> postList = postPage.getRecords();
         Page<PostVO> postVOPage = new Page<>(postPage.getPageNumber(), postPage.getPageSize(), postPage.getTotalRow());
         if (CollectionUtils.isEmpty(postList)) {
@@ -413,25 +438,28 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
                 .collect(Collectors.groupingBy(User::getId));
         // 2. 已登录，获取用户点赞、收藏状态
-//        Map<Long, Boolean> postIdHasThumbMap = new HashMap<>();
-//        Map<Long, Boolean> postIdHasFavourMap = new HashMap<>();
-//        User loginUser = userService.getLoginUserPermitNull(request);
-//        if (loginUser != null) {
-//            Set<Long> postIdSet = postList.stream().map(Post::getId).collect(Collectors.toSet());
-//            loginUser = userService.getLoginUser(request);
-//            // 获取点赞
-//            QueryWrapper<PostThumb> postThumbQueryWrapper = new QueryWrapper<>();
-//            postThumbQueryWrapper.in("postId", postIdSet);
-//            postThumbQueryWrapper.eq("userId", loginUser.getId());
-//            List<PostThumb> postPostThumbList = postThumbMapper.selectList(postThumbQueryWrapper);
-//            postPostThumbList.forEach(postPostThumb -> postIdHasThumbMap.put(postPostThumb.getPostId(), true));
-//            // 获取收藏
-//            QueryWrapper<PostFavour> postFavourQueryWrapper = new QueryWrapper<>();
-//            postFavourQueryWrapper.in("postId", postIdSet);
-//            postFavourQueryWrapper.eq("userId", loginUser.getId());
-//            List<PostFavour> postFavourList = postFavourMapper.selectList(postFavourQueryWrapper);
-//            postFavourList.forEach(postFavour -> postIdHasFavourMap.put(postFavour.getPostId(), true));
-//        }
+        Map<Long, Boolean> postIdHasThumbMap = new HashMap<>();
+        Map<Long, Boolean> postIdHasFavourMap = new HashMap<>();
+        User loginUser = userService.getLoginUserPermitNull(request);
+        if (loginUser != null) {
+            Set<Long> postIdSet = postList.stream().map(Post::getId).collect(Collectors.toSet());
+            loginUser = userService.getLoginUser(request);
+            // 获取点赞
+            QueryWrapper thumbQueryWrapper = new QueryWrapper();
+            thumbQueryWrapper.eq("type", ThumbTypeEnum.POST.getValue());
+            thumbQueryWrapper.in("targetId", postIdSet);
+            thumbQueryWrapper.eq("userId", loginUser.getId());
+
+
+            List<Thumb> postThumbList = thumbMapper.selectListByQuery(thumbQueryWrapper);
+            postThumbList.forEach(postPostThumb -> postIdHasThumbMap.put(postPostThumb.getTargetId(), true));
+            // 获取收藏
+            QueryWrapper postFavourQueryWrapper = new QueryWrapper();
+            postFavourQueryWrapper.in("postId", postIdSet);
+            postFavourQueryWrapper.eq("userId", loginUser.getId());
+            List<PostFavour> postFavourList = postFavourMapper.selectListByQuery(postFavourQueryWrapper);
+            postFavourList.forEach(postFavour -> postIdHasFavourMap.put(postFavour.getPostId(), true));
+        }
         // 填充信息
         List<PostVO> postVOList = postList.stream().map(post -> {
             PostVO postVO = PostVO.objToVo(post);
@@ -441,9 +469,9 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
                 user = userIdUserListMap.get(userId).get(0);
             }
             postVO.setUser(userService.getUserVO(user));
-//            postVO.setHasThumb(postIdHasThumbMap.getOrDefault(post.getId(), false));
-//            postVO.setHasFavour(postIdHasFavourMap.getOrDefault(post.getId(), false));
-            // TODO 浏览数量
+            postVO.setHasThumb(postIdHasThumbMap.getOrDefault(post.getId(), false));
+            postVO.setHasFavour(postIdHasFavourMap.getOrDefault(post.getId(), false));
+
             return postVO;
         }).collect(Collectors.toList());
         postVOPage.setRecords(postVOList);
@@ -451,10 +479,11 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     }
 
 
+
     /**
      * 将Post实体转换为PostVO
      */
-    private PostVO getPostVO(Post post) {
+    private PostVO getPostVO(Post post, HttpServletRequest request) {
         if (post == null) {
             return null;
         }
@@ -477,6 +506,25 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         }
         UserVO userVO = userService.getUserVO(user);
         postVO.setUser(userVO);
+
+        // 2. 已登录，获取用户点赞、收藏状态
+        User loginUser = userService.getLoginUserPermitNull(request);
+        if (loginUser != null) {
+            // 获取点赞
+            QueryWrapper thumbQueryWrapper = new QueryWrapper();
+            thumbQueryWrapper.eq("type", ThumbTypeEnum.POST.getValue());
+            thumbQueryWrapper.eq("targetId", post.getId());
+            thumbQueryWrapper.eq("userId", loginUser.getId());
+            Thumb postThumb = thumbMapper.selectOneByQuery(thumbQueryWrapper);
+            postVO.setHasThumb(postThumb != null);
+            // 获取收藏
+            QueryWrapper postFavourQueryWrapper = new QueryWrapper();
+            postFavourQueryWrapper.in("postId", post.getId());
+            postFavourQueryWrapper.eq("userId", loginUser.getId());
+            PostFavour postFavour = postFavourMapper.selectOneByQuery(postFavourQueryWrapper);
+            postVO.setHasFavour(postFavour != null);
+        }
+
 
         return postVO;
     }

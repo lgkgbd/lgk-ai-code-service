@@ -14,6 +14,7 @@ import com.lgk.lgkaicodeservice.model.dto.post.PostQueryRequest;
 import com.lgk.lgkaicodeservice.model.dto.post.PostUpdateRequest;
 import com.lgk.lgkaicodeservice.model.entity.Post;
 import com.lgk.lgkaicodeservice.model.entity.User;
+import com.lgk.lgkaicodeservice.model.enums.UserRoleEnum;
 import com.lgk.lgkaicodeservice.model.vo.PostVO;
 import com.lgk.lgkaicodeservice.service.PostService;
 import com.lgk.lgkaicodeservice.service.UserService;
@@ -81,11 +82,11 @@ public class PostController {
         Long postId = deleteRequest.getId();
         
         // 判断是否存在
-        PostVO postVO = postService.getPostVO(postId);
-        ThrowUtils.throwIf(postVO == null, ErrorCode.NOT_FOUND_ERROR);
+        Post post = postService.getById(postId);
+        ThrowUtils.throwIf(post == null, ErrorCode.NOT_FOUND_ERROR);
         
         // 仅本人或管理员可删除
-        if (!postVO.getUserId().equals(loginUser.getId()) && !"admin".equals(loginUser.getUserRole())) {
+        if (!post.getUserId().equals(loginUser.getId()) && !UserRoleEnum.ADMIN.getValue().equals(loginUser.getUserRole())) {
             throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
         }
         
@@ -137,10 +138,10 @@ public class PostController {
      * @return 帖子信息
      */
     @GetMapping("/get/vo")
-    public BaseResponse<PostVO> getPostVOById(Long id) {
+    public BaseResponse<PostVO> getPostVOById(Long id,HttpServletRequest request) {
         ThrowUtils.throwIf(id == null || id <= 0, ErrorCode.PARAMS_ERROR);
         
-        PostVO postVO = postService.getPostVO(id);
+        PostVO postVO = postService.getPostVO(id, request);
         ThrowUtils.throwIf(postVO == null, ErrorCode.NOT_FOUND_ERROR);
         
         // 异步去增加浏览量（不阻塞主线程）
@@ -156,7 +157,7 @@ public class PostController {
      * @return 分页结果
      */
     @PostMapping("/list/page/vo")
-    public BaseResponse<Page<PostVO>> listPostVOByPage(@RequestBody PostQueryRequest postQueryRequest) {
+    public BaseResponse<Page<PostVO>> listPostVOByPage(@RequestBody PostQueryRequest postQueryRequest, HttpServletRequest request) {
         if (postQueryRequest == null) {
             postQueryRequest = new PostQueryRequest();
         }
@@ -166,7 +167,7 @@ public class PostController {
         ThrowUtils.throwIf(size > 20, ErrorCode.PARAMS_ERROR);
 
 
-        Page<PostVO> postVOPage = postService.listPostVOByPage(postQueryRequest);
+        Page<PostVO> postVOPage = postService.listPostVOByPage(postQueryRequest, request);
         return ResultUtils.success(postVOPage);
     }
 
@@ -187,7 +188,7 @@ public class PostController {
         User loginUser = userService.getLoginUser(request);
         postQueryRequest.setUserId(loginUser.getId());
         
-        Page<PostVO> postVOPage = postService.listPostVOByPage(postQueryRequest);
+        Page<PostVO> postVOPage = postService.listPostVOByPage(postQueryRequest, request);
         return ResultUtils.success(postVOPage);
     }
 
@@ -200,12 +201,12 @@ public class PostController {
      */
     @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Page<PostVO>> listPostByPage(@RequestBody PostQueryRequest postQueryRequest) {
+    public BaseResponse<Page<PostVO>> listPostByPage(@RequestBody PostQueryRequest postQueryRequest, HttpServletRequest request) {
         if (postQueryRequest == null) {
             postQueryRequest = new PostQueryRequest();
         }
         
-        Page<PostVO> postVOPage = postService.listPostVOByPage(postQueryRequest);
+        Page<PostVO> postVOPage = postService.listPostVOByPage(postQueryRequest, request);
         return ResultUtils.success(postVOPage);
     }
 }

@@ -88,4 +88,5 @@ public interface UserService extends IService<User> {
     List<Integer> getUserSignInRecord(long userId, Integer year);
 
 
+    User getLoginUserPermitNull(HttpServletRequest request);
 }
