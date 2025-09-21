@@ -6,6 +6,7 @@ import co.elastic.clients.elasticsearch._types.SortOptions;
 import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.lgk.lgkaicodeservice.constant.CommonConstant;
+import com.lgk.lgkaicodeservice.constant.ThumbConstant;
 import com.lgk.lgkaicodeservice.mapper.PostFavourMapper;
 import com.lgk.lgkaicodeservice.mapper.ThumbMapper;
 import com.lgk.lgkaicodeservice.model.dto.post.PostEsDTO;
@@ -14,7 +15,9 @@ import com.lgk.lgkaicodeservice.model.entity.Thumb;
 import com.lgk.lgkaicodeservice.model.entity.User;
 import com.lgk.lgkaicodeservice.model.enums.ThumbTypeEnum;
 import com.lgk.lgkaicodeservice.model.vo.UserVO;
+import com.lgk.lgkaicodeservice.service.ThumbService;
 import com.lgk.lgkaicodeservice.service.UserService;
+import com.lgk.lgkaicodeservice.utils.RedisKeyUtil;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.core.update.UpdateChain;
@@ -31,8 +34,10 @@ import com.lgk.lgkaicodeservice.service.PostService;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.ObjectUtils;
+import org.redisson.api.RMap;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.elasticsearch.client.elc.ElasticsearchTemplate;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
@@ -65,7 +70,14 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     private ThumbMapper thumbMapper;
 
     @Resource
+    @Lazy // 懒加载 解决循环引用的问题
+    private ThumbService thumbService;
+
+    @Resource
     private PostFavourMapper postFavourMapper;
+
+    @Resource
+    private RedissonClient redissonClient;
 
     @Resource
     private ElasticsearchTemplate elasticsearchTemplate;
@@ -445,14 +457,20 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             Set<Long> postIdSet = postList.stream().map(Post::getId).collect(Collectors.toSet());
             loginUser = userService.getLoginUser(request);
             // 获取点赞
-            QueryWrapper thumbQueryWrapper = new QueryWrapper();
-            thumbQueryWrapper.eq("type", ThumbTypeEnum.POST.getValue());
-            thumbQueryWrapper.in("targetId", postIdSet);
-            thumbQueryWrapper.eq("userId", loginUser.getId());
+//            QueryWrapper thumbQueryWrapper = new QueryWrapper();
+//            thumbQueryWrapper.eq("type", ThumbTypeEnum.POST.getValue());
+//            thumbQueryWrapper.in("targetId", postIdSet);
+//            thumbQueryWrapper.eq("userId", loginUser.getId());
+//
+//
+//            List<Thumb> postThumbList = thumbMapper.selectListByQuery(thumbQueryWrapper);
+//            postThumbList.forEach(postPostThumb -> postIdHasThumbMap.put(postPostThumb.getTargetId(), true));
+            String key = RedisKeyUtil.getUserThumbKey(loginUser.getId(),ThumbTypeEnum.POST);
+            Map<Object, Object> thumbMap = redissonClient.getMap(key)
+                                                    .getAll(new HashSet<>(postIdSet));
+            Set<Object> thumbPostIdSet = thumbMap.keySet();
+            thumbPostIdSet.forEach(thumbPostId -> postIdHasThumbMap.put(Long.valueOf(thumbPostId.toString()) , true));
 
-
-            List<Thumb> postThumbList = thumbMapper.selectListByQuery(thumbQueryWrapper);
-            postThumbList.forEach(postPostThumb -> postIdHasThumbMap.put(postPostThumb.getTargetId(), true));
             // 获取收藏
             QueryWrapper postFavourQueryWrapper = new QueryWrapper();
             postFavourQueryWrapper.in("postId", postIdSet);
@@ -511,12 +529,15 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         User loginUser = userService.getLoginUserPermitNull(request);
         if (loginUser != null) {
             // 获取点赞
-            QueryWrapper thumbQueryWrapper = new QueryWrapper();
-            thumbQueryWrapper.eq("type", ThumbTypeEnum.POST.getValue());
-            thumbQueryWrapper.eq("targetId", post.getId());
-            thumbQueryWrapper.eq("userId", loginUser.getId());
-            Thumb postThumb = thumbMapper.selectOneByQuery(thumbQueryWrapper);
-            postVO.setHasThumb(postThumb != null);
+//            QueryWrapper thumbQueryWrapper = new QueryWrapper();
+//            thumbQueryWrapper.eq("type", ThumbTypeEnum.POST.getValue());
+//            thumbQueryWrapper.eq("targetId", post.getId());
+//            thumbQueryWrapper.eq("userId", loginUser.getId());
+//            Thumb postThumb = thumbMapper.selectOneByQuery(thumbQueryWrapper);
+//            postVO.setHasThumb(postThumb != null);
+            Boolean exits = thumbService.hasThumb(ThumbTypeEnum.POST, post.getId(), userId);
+            postVO.setHasThumb(exits);
+
             // 获取收藏
             QueryWrapper postFavourQueryWrapper = new QueryWrapper();
             postFavourQueryWrapper.in("postId", post.getId());

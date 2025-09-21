@@ -4,6 +4,7 @@ import com.lgk.lgkaicodeservice.model.entity.Post;
 import com.lgk.lgkaicodeservice.service.PostService;
 import com.mybatisflex.core.update.UpdateChain;
 import jakarta.annotation.Resource;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Component;
 
 // 帖子点赞处理器
@@ -12,7 +13,6 @@ public class PostThumbHandler implements ThumbHandler {
 
     @Resource
     private PostService postService;
-
 
     @Override
     public boolean checkTargetExists(Long targetId) {

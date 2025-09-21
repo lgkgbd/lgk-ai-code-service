@@ -1,19 +1,22 @@
 package com.lgk.lgkaicodeservice.service.impl;
 
-import com.lgk.lgkaicodeservice.constant.ThumbConstant;
+import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
 import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
+import com.lgk.lgkaicodeservice.mapper.ThumbMapper;
+import com.lgk.lgkaicodeservice.model.entity.Thumb;
 import com.lgk.lgkaicodeservice.model.entity.User;
 import com.lgk.lgkaicodeservice.model.enums.ThumbTypeEnum;
+import com.lgk.lgkaicodeservice.service.ThumbService;
 import com.lgk.lgkaicodeservice.service.thumb.ThumbHandler;
 import com.lgk.lgkaicodeservice.service.thumb.ThumbHandlerFactory;
 import com.lgk.lgkaicodeservice.utils.RedisKeyUtil;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import com.lgk.lgkaicodeservice.model.entity.Thumb;
-import com.lgk.lgkaicodeservice.mapper.ThumbMapper;
-import com.lgk.lgkaicodeservice.service.ThumbService;
 import jakarta.annotation.Resource;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.aop.framework.AopContext;
 import org.springframework.stereotype.Service;
@@ -24,8 +27,10 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * @author <a href="https://github.com/lgkgbd">程序员lgk</a>
  */
-@Service
-public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb>  implements ThumbService{
+@Service("thumbService")
+@Slf4j
+@RequiredArgsConstructor
+public class ThumbServiceRedisImpl extends ServiceImpl<ThumbMapper, Thumb>  implements ThumbService{
 
     @Resource
     private ThumbHandlerFactory thumbHandlerFactory;
@@ -102,4 +107,12 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb>  implement
             }
         }
     }
+
+
+    private String getTimeSlice(){
+        DateTime nowDate = DateUtil.date();
+        // 获取当前时间的整数秒
+        return DateUtil.format(nowDate,"HH:mm") + (DateUtil.second(nowDate)/10) * 10;
+    }
+
 }

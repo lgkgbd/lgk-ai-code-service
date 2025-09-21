@@ -13,7 +13,9 @@ import com.lgk.lgkaicodeservice.model.entity.Thumb;
  */
 public interface ThumbService extends IService<Thumb> {
 
-    int doThumb(ThumbTypeEnum type, long targetId, User loginUser);
+    int doThumb(ThumbTypeEnum type, Long targetId, User loginUser);
 
-    int doThumbInner(ThumbTypeEnum type, long targetId, Long userId, ThumbHandler thumbHandler);
+    Boolean hasThumb(ThumbTypeEnum type, Long targetId, Long userId);
+
+    int doThumbInner(ThumbTypeEnum type, Long targetId, Long userId, ThumbHandler thumbHandler);
 }
