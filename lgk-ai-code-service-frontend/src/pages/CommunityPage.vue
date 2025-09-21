@@ -155,19 +155,29 @@
           </div>
 
           <div class="post-actions">
-            <a-button type="text" class="action-item">
+            <a-button
+              type="text"
+              class="action-item"
+              :class="{ active: post.hasThumb }"
+              @click.stop="handleThumb(post)"
+            >
               <template #icon>👍</template>
               {{ post.thumbNum || 0 }}
             </a-button>
-            <a-button type="text" class="action-item">
+            <a-button type="text" class="action-item" @click.stop="handlePostClick(post.id)">
               <template #icon>💬</template>
-              {{ post.favourNum || 0 }}
+              评论
             </a-button>
-            <a-button type="text" class="action-item">
+            <a-button
+              type="text"
+              class="action-item"
+              :class="{ active: post.hasFavour }"
+              @click.stop="handleFavour(post)"
+            >
               <template #icon>⭐</template>
               {{ post.favourNum || 0 }}
             </a-button>
-            <a-button type="text" class="action-item">
+            <a-button type="text" class="action-item" @click.stop="handleShare(post)">
               <template #icon>📤</template>
               分享
             </a-button>
@@ -204,6 +214,8 @@ import { message } from 'ant-design-vue'
 import { useRouter } from 'vue-router'
 import { SearchOutlined } from '@ant-design/icons-vue'
 import { listPostVoByPage, addPost } from '@/api/postController'
+import { doThumb } from '@/api/thumbController'
+import { doPostFavour } from '@/api/postFavourController'
 
 const router = useRouter()
 
@@ -500,6 +512,97 @@ const searchInputTimer = ref<NodeJS.Timeout | null>(null)
 const handlePostClick = (postId: string | undefined) => {
   if (postId) {
     router.push(`/post/${postId}`)
+  }
+}
+
+// 点赞处理
+const handleThumb = async (post: API.PostVO) => {
+  if (!post.id) return
+
+  try {
+    const { data: res } = await doThumb({
+      targetId: post.id,
+      type: 'POST'
+    })
+
+    if (res?.code === 0) {
+      // 切换点赞状态
+      post.hasThumb = !post.hasThumb
+      post.thumbNum = (post.thumbNum || 0) + (post.hasThumb ? 1 : -1)
+      message.success({ content: post.hasThumb ? '点赞成功' : '取消点赞', duration: 1.5 })
+    } else {
+      message.error({ content: res?.message || '操作失败', duration: 2.5 })
+    }
+  } catch (error) {
+    console.error('点赞失败:', error)
+    message.error({ content: '网络错误，请稍后重试', duration: 2.5 })
+  }
+}
+
+// 收藏处理
+const handleFavour = async (post: API.PostVO) => {
+  if (!post.id) return
+
+  try {
+    const { data: res } = await doPostFavour({
+      postId: post.id
+    })
+
+    if (res?.code === 0) {
+      // 切换收藏状态
+      post.hasFavour = !post.hasFavour
+      post.favourNum = (post.favourNum || 0) + (post.hasFavour ? 1 : -1)
+      message.success({ content: post.hasFavour ? '收藏成功' : '取消收藏', duration: 1.5 })
+    } else {
+      message.error({ content: res?.message || '操作失败', duration: 2.5 })
+    }
+  } catch (error) {
+    console.error('收藏失败:', error)
+    message.error({ content: '网络错误，请稍后重试', duration: 2.5 })
+  }
+}
+
+// 分享处理
+const handleShare = (post: API.PostVO) => {
+  const shareUrl = `${window.location.origin}/post/${post.id}`
+  const shareText = post.title || post.content?.substring(0, 50) + '...' || '分享帖子'
+
+  if (navigator.share) {
+    navigator.share({
+      title: shareText,
+      text: post.content?.substring(0, 100) + '...' || '',
+      url: shareUrl
+    }).catch(() => {
+      // 如果分享失败，复制链接
+      copyToClipboard(shareUrl)
+    })
+  } else {
+    // 复制链接到剪贴板
+    copyToClipboard(shareUrl)
+  }
+}
+
+// 复制到剪贴板
+const copyToClipboard = (text: string) => {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      message.success({ content: '链接已复制到剪贴板', duration: 1.5 })
+    }).catch(() => {
+      message.error({ content: '复制失败', duration: 2.5 })
+    })
+  } else {
+    // 兼容旧浏览器
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      message.success({ content: '链接已复制到剪贴板', duration: 1.5 })
+    } catch (err) {
+      message.error({ content: '复制失败', duration: 2.5 })
+    }
+    document.body.removeChild(textArea)
   }
 }
 
@@ -877,6 +980,11 @@ onUnmounted(() => {
 }
 
 .action-item:hover {
+  color: #1890ff;
+  background: #f0f8ff;
+}
+
+.action-item.active {
   color: #1890ff;
   background: #f0f8ff;
 }

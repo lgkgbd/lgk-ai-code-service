@@ -2,15 +2,16 @@
   <div class="post-detail-page-layout" v-if="!isLoading && post">
     <!-- Floating Action Bar -->
     <div class="floating-actions">
-      <a-button type="primary" shape="circle" class="action-btn" :class="{ active: isLiked }" @click="handleLike">
+      <a-button type="primary" shape="circle" class="action-btn" :class="{ active: post.hasThumb }" @click="handleLike">
         👍
         <span class="count">{{ post.thumbNum || 0 }}</span>
       </a-button>
       <a-button shape="circle" class="action-btn" @click="scrollToComments">
         💬
       </a-button>
-      <a-button shape="circle" class="action-btn" :class="{ active: isFavorited }" @click="handleFavorite">
+      <a-button shape="circle" class="action-btn" :class="{ active: post.hasFavour }" @click="handleFavorite">
         ⭐
+        <span class="count">{{ post.favourNum || 0 }}</span>
       </a-button>
       <a-divider />
       <a-button shape="circle" class="action-btn" @click="handleShare">
@@ -108,6 +109,8 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getPostVoById } from '@/api/postController'
+import { doThumb } from '@/api/thumbController'
+import { doPostFavour } from '@/api/postFavourController'
 import { showError, showSuccess, showWarning } from '@/utils/message'
 import { marked } from 'marked'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
@@ -119,8 +122,6 @@ const router = useRouter()
 // 数据状态
 const post = ref<API.PostVO | null>(null)
 const isLoading = ref(true)
-const isLiked = ref(false)
-const isFavorited = ref(false)
 const commentContent = ref('')
 
 // 获取帖子详情
@@ -208,38 +209,93 @@ const handleEdit = () => {
 
 
 // 点赞处理
-const handleLike = () => {
-  isLiked.value = !isLiked.value
-  if (post.value) {
-    post.value.thumbNum = (post.value.thumbNum || 0) + (isLiked.value ? 1 : -1)
+const handleLike = async () => {
+  if (!post.value?.id) return
+
+  try {
+    const { data: res } = await doThumb({
+      targetId: post.value.id,
+      type: 'POST'
+    })
+
+    if (res?.code === 0) {
+      // 切换点赞状态
+      post.value.hasThumb = !post.value.hasThumb
+      post.value.thumbNum = (post.value.thumbNum || 0) + (post.value.hasThumb ? 1 : -1)
+      showSuccess(post.value.hasThumb ? '点赞成功' : '取消点赞')
+    } else {
+      showError(res?.message || '操作失败')
+    }
+  } catch (error) {
+    console.error('点赞失败:', error)
+    showError('网络错误，请稍后重试')
   }
-  showSuccess(isLiked.value ? '点赞成功' : '取消点赞')
 }
 
 // 收藏处理
-const handleFavorite = () => {
-  isFavorited.value = !isFavorited.value
-  if (post.value) {
-    post.value.favourNum = (post.value.favourNum || 0) + (isFavorited.value ? 1 : -1)
+const handleFavorite = async () => {
+  if (!post.value?.id) return
+
+  try {
+    const { data: res } = await doPostFavour({
+      postId: post.value.id
+    })
+
+    if (res?.code === 0) {
+      // 切换收藏状态
+      post.value.hasFavour = !post.value.hasFavour
+      post.value.favourNum = (post.value.favourNum || 0) + (post.value.hasFavour ? 1 : -1)
+      showSuccess(post.value.hasFavour ? '收藏成功' : '取消收藏')
+    } else {
+      showError(res?.message || '操作失败')
+    }
+  } catch (error) {
+    console.error('收藏失败:', error)
+    showError('网络错误，请稍后重试')
   }
-  showSuccess(isFavorited.value ? '收藏成功' : '取消收藏')
 }
 
 // 分享处理
 const handleShare = () => {
+  const shareUrl = window.location.href
+  const shareText = post.value?.title || post.value?.content?.substring(0, 50) + '...' || '分享帖子'
+
   if (navigator.share) {
     navigator.share({
-      title: post.value?.title || '分享帖子',
-      text: post.value?.content || '',
-      url: window.location.href
+      title: shareText,
+      text: post.value?.content?.substring(0, 100) + '...' || '',
+      url: shareUrl
+    }).catch(() => {
+      // 如果分享失败，复制链接
+      copyToClipboard(shareUrl)
     })
   } else {
     // 复制链接到剪贴板
-    navigator.clipboard.writeText(window.location.href).then(() => {
+    copyToClipboard(shareUrl)
+  }
+}
+
+// 复制到剪贴板
+const copyToClipboard = (text: string) => {
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
       showSuccess('链接已复制到剪贴板')
     }).catch(() => {
-      showError('分享失败')
+      showError('复制失败')
     })
+  } else {
+    // 兼容旧浏览器
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    document.body.appendChild(textArea)
+    textArea.select()
+    try {
+      document.execCommand('copy')
+      showSuccess('链接已复制到剪贴板')
+    } catch (err) {
+      showError('复制失败')
+    }
+    document.body.removeChild(textArea)
   }
 }
 
@@ -306,6 +362,8 @@ onMounted(() => {
   padding: 0 5px;
   border-radius: 10px;
   line-height: 18px;
+  min-width: 18px;
+  text-align: center;
 }
 .floating-actions .action-btn.active {
   color: #1890ff;
