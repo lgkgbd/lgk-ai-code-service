@@ -42,7 +42,7 @@ public class ThumbServiceRedisImpl extends ServiceImpl<ThumbMapper, Thumb>  impl
     public int doThumb(ThumbTypeEnum type, Long targetId, User loginUser) {
 
         ThumbHandler thumbHandler = thumbHandlerFactory.getHandler(type);
-        boolean isExist = thumbHandler.checkTargetExists(targetId);
+        boolean isExist = thumbHandler.checkTargetExists(targetId);// TODO 这个去查询数据库有隐患
         if (!isExist) {
             throw new BusinessException(ErrorCode.NOT_FOUND_ERROR);
         }
@@ -52,7 +52,7 @@ public class ThumbServiceRedisImpl extends ServiceImpl<ThumbMapper, Thumb>  impl
         // 每个用户串行点赞
         // 锁必须要包裹住事务方法
         ThumbService thumbService = (ThumbService) AopContext.currentProxy();
-        synchronized (String.valueOf(userId).intern()) {
+        synchronized (String.valueOf(userId).intern()) { //把字符串对象放入字符串常量池（String Pool），并返回常量池中对应的字符串引用。
             return thumbService.doThumbInner(type, targetId, userId, thumbHandler);
         }
     }

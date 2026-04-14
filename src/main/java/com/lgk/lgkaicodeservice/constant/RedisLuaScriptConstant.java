@@ -19,7 +19,7 @@ public class RedisLuaScriptConstant {
             local tempThumbKey = KEYS[1]       -- 临时计数键（如 thumb:temp:{timeSlice}）  
             local userThumbKey = KEYS[2]       -- 用户点赞状态键（如 thumb:{userId}）  
             local userId = ARGV[1]             -- 用户 ID  
-            local targetId = ARGV[2]             -- 博客 ID  
+            local targetId = ARGV[2]             -- 目标 ID  
               
             -- 1. 检查是否已点赞（避免重复操作）  
             if redis.call('HEXISTS', userThumbKey, targetId) == 1 then  
@@ -51,7 +51,7 @@ public class RedisLuaScriptConstant {
             local tempThumbKey = KEYS[1]      -- 临时计数键（如 thumb:temp:{timeSlice}）  
             local userThumbKey = KEYS[2]      -- 用户点赞状态键（如 thumb:{userId}）  
             local userId = ARGV[1]            -- 用户 ID  
-            local targetId = ARGV[2]            -- 博客 ID  
+            local targetId = ARGV[2]            -- 目标 ID  
               
             -- 1. 检查用户是否已点赞（若未点赞，直接返回失败）  
             if redis.call('HEXISTS', userThumbKey, targetId) ~= 1 then  

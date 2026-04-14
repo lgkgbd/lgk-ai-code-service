@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * @author <a href="https://github.com/lgkgbd">程序员lgk</a>
  */
-@Service
+@Service("thumbServiceDB")
 public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb>  implements ThumbService{
 
     @Resource

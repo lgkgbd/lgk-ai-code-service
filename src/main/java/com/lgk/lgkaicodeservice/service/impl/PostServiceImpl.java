@@ -465,11 +465,15 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 //
 //            List<Thumb> postThumbList = thumbMapper.selectListByQuery(thumbQueryWrapper);
 //            postThumbList.forEach(postPostThumb -> postIdHasThumbMap.put(postPostThumb.getTargetId(), true));
-            String key = RedisKeyUtil.getUserThumbKey(loginUser.getId(),ThumbTypeEnum.POST);
+            // 修复：getAll() 需要 Set<Object> 类型的键集合
+            String key = RedisKeyUtil.getUserThumbKey(loginUser.getId(), ThumbTypeEnum.POST);
+            Set<Object> postIdObjSet = postIdSet.stream()
+                    .map(String::valueOf)
+                    .collect(Collectors.toSet());
             Map<Object, Object> thumbMap = redissonClient.getMap(key)
-                                                    .getAll(new HashSet<>(postIdSet));
-            Set<Object> thumbPostIdSet = thumbMap.keySet();
-            thumbPostIdSet.forEach(thumbPostId -> postIdHasThumbMap.put(Long.valueOf(thumbPostId.toString()) , true));
+                    .getAll(postIdObjSet);
+            thumbMap.keySet().forEach(thumbPostId -> 
+                postIdHasThumbMap.put(Long.valueOf(thumbPostId.toString()), true));
 
             // 获取收藏
             QueryWrapper postFavourQueryWrapper = new QueryWrapper();
