@@ -7,7 +7,7 @@
       >
         <template #cover>
         <div class="video-cover">
-          <img :alt="item.title" :src="item.cover ? 'https:' + item.cover : ''" />
+          <img :alt="item.title" :src="item.cover ? 'https:' + item.cover : ''" referrerpolicy="no-referrer" />
           <div class="video-info">
             <span><play-circle-outlined /> {{ item.playCount }}</span>
             <span><clock-circle-outlined /> {{ item.duration }}</span>
