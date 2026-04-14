@@ -45,12 +45,12 @@ public class VideoDataSource implements DataSource {
             video.setType(tempRecord.get("type").toString());
             video.setAuthor(tempRecord.get("author").toString());
             video.setArcurl(tempRecord.get("arcurl").toString());
-            video.setTitle(tempRecord.get("title").toString());
-            video.setDescription(tempRecord.get("description").toString());
+            video.setTitle(tempRecord.get("title").toString().replaceAll("<[^>]+>", ""));
+            video.setDescription(tempRecord.get("description").toString().replaceAll("<[^>]+>", ""));
             video.setPic(tempRecord.get("pic").toString());
             video.setPlay((int)tempRecord.get("play"));
             video.setVideoReview((int)tempRecord.get("video_review"));
-            video.setTag(tempRecord.get("tag").toString());
+            video.setTag(tempRecord.get("tag").toString().replaceAll("<[^>]+>", ""));
             video.setDuration(tempRecord.get("duration").toString());
             videoList.add(video);
         }
