@@ -6,7 +6,7 @@
         class="picture-card"
       >
         <template #cover>
-          <img :alt="item.title" :src="item.url" />
+          <img :alt="item.title" :src="item.url" referrerpolicy="no-referrer" />
         </template>
         <a-card-meta :title="item.title"></a-card-meta>
       </a-card>
