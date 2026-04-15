@@ -80,20 +80,11 @@ public class PostController {
         
         User loginUser = userService.getLoginUser(request);
         Long postId = deleteRequest.getId();
+        boolean isAdmin = UserRoleEnum.ADMIN.getValue().equals(loginUser.getUserRole());
         
-        // 判断是否存在
-        Post post = postService.getById(postId);
-        ThrowUtils.throwIf(post == null, ErrorCode.NOT_FOUND_ERROR);
+        Boolean result = postService.deletePost(postId, loginUser.getId(), isAdmin);
         
-        // 仅本人或管理员可删除
-        if (!post.getUserId().equals(loginUser.getId()) && !UserRoleEnum.ADMIN.getValue().equals(loginUser.getUserRole())) {
-            throw new BusinessException(ErrorCode.NO_AUTH_ERROR);
-        }
-        
-        boolean result = postService.removeById(postId);
-        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
-        
-        return ResultUtils.success(true);
+        return ResultUtils.success(result);
     }
 
     /**

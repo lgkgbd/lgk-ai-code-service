@@ -82,6 +82,9 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     @Resource
     private ElasticsearchTemplate elasticsearchTemplate;
 
+    @Resource
+    private com.lgk.lgkaicodeservice.service.RedisLuaScriptService redisLuaScriptService;
+
     @Override
     public Long addPost(PostAddRequest postAddRequest, Long userId) {
         ThrowUtils.throwIf(postAddRequest == null, ErrorCode.PARAMS_ERROR);
@@ -117,7 +120,41 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         boolean result = this.save(post);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "创建帖子失败");
 
+        // 同步到 Redis 存在性 Set
+        try {
+            redisLuaScriptService.addPostToExistsSet(post.getId());
+            // 初始化点赞数为 0
+            redisLuaScriptService.initPostThumbCount(post.getId(), 0);
+        } catch (Exception e) {
+            log.error("同步帖子到 Redis 失败: postId={}", post.getId(), e);
+            // 不影响主流程，记录日志即可
+        }
+
         return post.getId();
+    }
+
+    @Override
+    public Boolean deletePost(Long postId, Long userId, boolean isAdmin) {
+        ThrowUtils.throwIf(postId == null || postId <= 0, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIf(userId == null || userId <= 0, ErrorCode.NOT_LOGIN_ERROR);
+
+        // 查询原帖子
+        Post post = this.getById(postId);
+        ThrowUtils.throwIf(post == null, ErrorCode.NOT_FOUND_ERROR, "帖子不存在");
+        ThrowUtils.throwIf(!post.getUserId().equals(userId) && !isAdmin, ErrorCode.NO_AUTH_ERROR, "无权限删除");
+
+        // 删除数据库记录
+        boolean result = this.removeById(postId);
+        ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR, "删除帖子失败");
+
+        // 同步清理 Redis
+        try {
+            redisLuaScriptService.removePostFromExistsSet(postId);
+        } catch (Exception e) {
+            log.warn("删除帖子后清理 Redis 失败: postId={}", postId, e);
+        }
+
+        return true;
     }
 
     @Override

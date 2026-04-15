@@ -27,6 +27,16 @@ public interface PostService extends IService<Post> {
     Long addPost(PostAddRequest postAddRequest, Long userId);
 
     /**
+     * 删除帖子（含 Redis 清理）
+     *
+     * @param postId 帖子id
+     * @param userId 当前用户id
+     * @param isAdmin 是否为管理员
+     * @return 是否成功
+     */
+    Boolean deletePost(Long postId, Long userId, boolean isAdmin);
+
+    /**
      * 更新帖子
      *
      * @param postUpdateRequest 帖子更新请求

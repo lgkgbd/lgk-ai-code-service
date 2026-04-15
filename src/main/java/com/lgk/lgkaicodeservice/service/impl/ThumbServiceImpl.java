@@ -86,7 +86,7 @@ public class ThumbServiceImpl extends ServiceImpl<ThumbMapper, Thumb>  implement
         } else {
             // 未点赞
             Thumb thumb = new Thumb();
-            thumb.setType(type.getValue());
+            thumb.setType(type.getCode());
             thumb.setTargetId(targetId);
             thumb.setUserId(userId);
             result = this.save(thumb);
