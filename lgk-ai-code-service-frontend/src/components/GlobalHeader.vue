@@ -223,15 +223,17 @@ const onSearch = (value: string) => {
 }
 
 .menu-link {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   height: 64px;
   line-height: 64px;
-  padding: 0 24px;
-  margin: 0 4px;
+  padding: 0 16px;
+  margin: 0 2px;
   border-radius: 6px;
   transition: all 0.3s ease;
   color: #333;
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .menu-link:hover {

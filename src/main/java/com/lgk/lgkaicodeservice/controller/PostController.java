@@ -100,7 +100,8 @@ public class PostController {
         ThrowUtils.throwIf(postUpdateRequest == null, ErrorCode.PARAMS_ERROR);
         
         User loginUser = userService.getLoginUser(request);
-        Boolean result = postService.updatePost(postUpdateRequest, loginUser.getId());
+        boolean isAdmin = UserRoleEnum.ADMIN.getValue().equals(loginUser.getUserRole());
+        Boolean result = postService.updatePost(postUpdateRequest, loginUser.getId(), isAdmin);
         
         return ResultUtils.success(result);
     }

@@ -7,6 +7,7 @@ import UserProfilePage from '@/pages/user/UserProfilePage.vue'
 import UserManagePage from '@/pages/admin/UserManagePage.vue'
 import AppManagePage from '@/pages/admin/AppManagePage.vue'
 import ChatManagePage from '@/pages/admin/ChatManagePage.vue'
+import PostManagePage from '@/pages/admin/PostManagePage.vue'
 import AppChatPage from '@/pages/app/AppChatPage.vue'
 import AppEditPage from '@/pages/app/AppEditPage.vue'
 import AboutPage from '@/pages/AboutPage.vue'
@@ -84,6 +85,14 @@ const router = createRouter({
       path: '/admin/chatManage',
       name: 'adminChatManage',
       component: ChatManagePage,
+      meta: {
+        access: ACCESS_ENUM.ADMIN,
+      },
+    },
+    {
+      path: '/admin/postManage',
+      name: 'adminPostManage',
+      component: PostManagePage,
       meta: {
         access: ACCESS_ENUM.ADMIN,
       },

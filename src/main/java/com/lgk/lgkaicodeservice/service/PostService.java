@@ -41,9 +41,10 @@ public interface PostService extends IService<Post> {
      *
      * @param postUpdateRequest 帖子更新请求
      * @param userId 当前用户id
+     * @param isAdmin 是否为管理员
      * @return 是否成功
      */
-    Boolean updatePost(PostUpdateRequest postUpdateRequest, Long userId);
+    Boolean updatePost(PostUpdateRequest postUpdateRequest, Long userId, boolean isAdmin);
 
     /**
      * 根据id获取帖子VO

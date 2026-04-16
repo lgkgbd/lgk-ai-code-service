@@ -158,7 +158,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
     }
 
     @Override
-    public Boolean updatePost(PostUpdateRequest postUpdateRequest, Long userId) {
+    public Boolean updatePost(PostUpdateRequest postUpdateRequest, Long userId, boolean isAdmin) {
         ThrowUtils.throwIf(postUpdateRequest == null, ErrorCode.PARAMS_ERROR);
         ThrowUtils.throwIf(userId == null || userId <= 0, ErrorCode.NOT_LOGIN_ERROR);
 
@@ -168,7 +168,7 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
         // 查询原帖子
         Post oldPost = this.getById(postId);
         ThrowUtils.throwIf(oldPost == null, ErrorCode.NOT_FOUND_ERROR, "帖子不存在");
-        ThrowUtils.throwIf(!oldPost.getUserId().equals(userId), ErrorCode.NO_AUTH_ERROR, "无权限修改");
+        ThrowUtils.throwIf(!oldPost.getUserId().equals(userId) && !isAdmin, ErrorCode.NO_AUTH_ERROR, "无权限修改");
 
         // 参数校验
         String title = postUpdateRequest.getTitle();
