@@ -62,9 +62,14 @@ const loadData = async (params: any, loadMore = false) => {
     videoList.value = []
   }
 
-  const requestParams = {
+  const requestParams: any = {
     ...params,
     pageNum: pageNum.value,
+  }
+
+  // 图片查询时设置 pageSize = 15
+  if (params.type === 'picture') {
+    requestParams.pageSize = 15
   }
 
   try {
