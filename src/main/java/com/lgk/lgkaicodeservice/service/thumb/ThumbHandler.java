@@ -2,6 +2,9 @@ package com.lgk.lgkaicodeservice.service.thumb;
 
 import com.lgk.lgkaicodeservice.model.enums.ThumbTypeEnum;
 
+import java.util.List;
+import java.util.Map;
+
 /**
  * 点赞处理器接口
  * <p>
@@ -40,9 +43,36 @@ public interface ThumbHandler {
     Integer incrementThumb(Long targetId);
 
     /**
+     * 批量点赞（聚合写）
+     *
+     * @param targetCountMap targetId -> 点赞增量（多条合并为一次 UPDATE）
+     */
+    default void incrementThumbBatch(Map<Long, Long> targetCountMap) {
+        // 默认实现：逐条调用（子类可覆盖为真正的批量聚合）
+        for (Map.Entry<Long, Long> entry : targetCountMap.entrySet()) {
+            Long targetId = entry.getKey();
+            Long count = entry.getValue();
+            for (int i = 0; i < count; i++) {
+                incrementThumb(targetId);
+            }
+        }
+    }
+
+    /**
      * 取消点赞 -1（更新数据库）
      */
     Integer decrementThumb(Long targetId);
+
+    /**
+     * 批量取消点赞（聚合写）
+     *
+     * @param targetIds 目标 ID 列表
+     */
+    default void decrementThumbBatch(List<Long> targetIds) {
+        for (Long targetId : targetIds) {
+            decrementThumb(targetId);
+        }
+    }
 
     /**
      * 点赞 +1（仅更新 Redis，用于临时存储模式）

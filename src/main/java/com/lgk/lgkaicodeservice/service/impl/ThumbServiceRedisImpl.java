@@ -6,8 +6,8 @@ import com.lgk.lgkaicodeservice.mapper.ThumbMapper;
 import com.lgk.lgkaicodeservice.model.entity.Thumb;
 import com.lgk.lgkaicodeservice.model.entity.User;
 import com.lgk.lgkaicodeservice.model.enums.ThumbTypeEnum;
+import com.lgk.lgkaicodeservice.mq.ThumbEventProducer;
 import com.lgk.lgkaicodeservice.service.RedisLuaScriptService;
-import com.lgk.lgkaicodeservice.service.TempThumbStorageService;
 import com.lgk.lgkaicodeservice.service.ThumbService;
 import com.lgk.lgkaicodeservice.service.thumb.ThumbHandler;
 import com.lgk.lgkaicodeservice.service.thumb.ThumbHandlerFactory;
@@ -43,7 +43,7 @@ public class ThumbServiceRedisImpl extends ServiceImpl<ThumbMapper, Thumb>  impl
     private RedisLuaScriptService redisLuaScriptService;
 
     @Resource
-    private TempThumbStorageService tempThumbStorageService;
+    private ThumbEventProducer thumbEventProducer;
 
     @Override
     public int doThumb(ThumbTypeEnum type, Long targetId, User loginUser) {
@@ -123,9 +123,9 @@ public class ThumbServiceRedisImpl extends ServiceImpl<ThumbMapper, Thumb>  impl
         }
 
         if (result == 1) {
-            // 点赞成功，保存到临时存储，等待批量同步到数据库
+            // 点赞成功，发送到 RabbitMQ（失败时降级到 TempThumbStorageService）
             // Redis 计数已由 Lua 脚本原子性更新，无需再次调用 incrementThumbInRedis
-            tempThumbStorageService.saveTempThumb(userId, type, targetId, tempThumbId, 1);
+            thumbEventProducer.sendEvent(userId, type, targetId, tempThumbId, 1);
             return 1;
         }
 
@@ -146,8 +146,9 @@ public class ThumbServiceRedisImpl extends ServiceImpl<ThumbMapper, Thumb>  impl
             return thumbHandler.decrementThumb(targetId);
         }
 
-        // result == 1：Lua 脚本已原子性删除 Hash 并 DECR 计数，这里只需保存临时记录等待同步
-        tempThumbStorageService.saveTempThumb(userId, type, targetId, null, 0);
+        // result == 1：Lua 脚本已原子性删除 Hash 并 DECR 计数，发送到 RabbitMQ
+        // 失败时降级到 TempThumbStorageService，由 ThumbBatchSyncJob 兜底处理
+        thumbEventProducer.sendEvent(userId, type, targetId, null, 0);
 
         return -1;
     }

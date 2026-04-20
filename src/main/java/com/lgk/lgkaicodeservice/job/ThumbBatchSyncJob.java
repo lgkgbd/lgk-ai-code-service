@@ -34,6 +34,9 @@ public class ThumbBatchSyncJob extends ServiceImpl<ThumbMapper, Thumb> {
 
     /**
      * 每10秒执行一次批量同步
+     * <p>
+     * 注意：此 Job 只处理降级路径（MQ 发送失败时写入 TempThumbStorageService 的数据）。
+     * MQ 主路径的消息由 ThumbEventConsumer 直接消费，不经过此 Job。
      */
     @Scheduled(fixedRate = ThumbConstant.BATCH_SYNC_INTERVAL_SECONDS * 1000)
     public void batchSync() {
@@ -42,7 +45,7 @@ public class ThumbBatchSyncJob extends ServiceImpl<ThumbMapper, Thumb> {
             return;
         }
 
-        log.info("开始执行点赞批量同步，待同步记录数: {}", pendingCount);
+        log.info("开始执行点赞批量同步（降级路径），待同步记录数: {}", pendingCount);
 
         try {
             // 获取待同步记录
@@ -158,22 +161,18 @@ public class ThumbBatchSyncJob extends ServiceImpl<ThumbMapper, Thumb> {
                     log.debug("批量插入 {} 条点赞记录", thumbs.size());
                 }
 
-                // 6. 仅对实际插入成功的记录更新数据库点赞数
+                // 6. 仅对实际插入成功的记录更新数据库点赞数（聚合 UPDATE）
                 // 注意：Redis 计数在实时操作时已更新，这里只同步数据库
                 ThumbHandler handler = thumbHandlerFactory.getHandlerByCode(type);
                 Map<Long, Long> targetCountMap = toInsert.stream()
                         .collect(Collectors.groupingBy(TempThumbDTO::getTargetId, Collectors.counting()));
 
-                for (Map.Entry<Long, Long> countEntry : targetCountMap.entrySet()) {
-                    try {
-                        Long targetId = countEntry.getKey();
-                        Long count = countEntry.getValue();
-                        for (int i = 0; i < count; i++) {
-                            handler.incrementThumb(targetId);
-                        }
-                    } catch (Exception e) {
-                        log.error("更新点赞数失败: targetId={}", countEntry.getKey(), e);
-                    }
+                try {
+                    // 聚合写：N 条点赞 → 1 次 UPDATE thumbNum = thumbNum + N
+                    handler.incrementThumbBatch(targetCountMap);
+                    log.debug("批量更新点赞数，targetCountMap={}", targetCountMap);
+                } catch (Exception e) {
+                    log.error("批量更新点赞数失败: targetCountMap={}", targetCountMap, e);
                 }
 
             } catch (Exception e) {
@@ -261,14 +260,16 @@ public class ThumbBatchSyncJob extends ServiceImpl<ThumbMapper, Thumb> {
                     this.remove(wrapper);
                 }
 
-                // 仅对实际删除的记录更新数据库点赞数
+                // 聚合写：多条取消点赞 → 1 次 UPDATE thumbNum = thumbNum - N
                 ThumbHandler handler = thumbHandlerFactory.getHandlerByCode(type);
-                for (TempThumbDTO dto : toDelete) {
-                    try {
-                        handler.decrementThumb(dto.getTargetId());
-                    } catch (Exception e) {
-                        log.error("更新点赞数失败: targetId={}", dto.getTargetId(), e);
-                    }
+                List<Long> targetIds = toDelete.stream()
+                        .map(TempThumbDTO::getTargetId)
+                        .collect(Collectors.toList());
+                try {
+                    handler.decrementThumbBatch(targetIds);
+                    log.debug("批量更新取消点赞数，targetIds={}", targetIds);
+                } catch (Exception e) {
+                    log.error("批量更新取消点赞数失败: targetIds={}", targetIds, e);
                 }
 
                 log.debug("取消点赞：成功删除 {} 条记录（跳过 {} 条不存在的）",

@@ -7,9 +7,15 @@ import com.lgk.lgkaicodeservice.service.RedisLuaScriptService;
 import com.lgk.lgkaicodeservice.utils.RedisKeyUtil;
 import com.mybatisflex.core.update.UpdateChain;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RAtomicLong;
 import org.redisson.api.RedissonClient;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 帖子点赞处理器
@@ -24,6 +30,7 @@ import org.springframework.stereotype.Component;
  * @see ThumbHandlerFactory
  */
 @Component
+@Slf4j
 public class PostThumbHandler implements ThumbHandler {
 
     @Resource
@@ -34,6 +41,9 @@ public class PostThumbHandler implements ThumbHandler {
 
     @Resource
     private RedissonClient redissonClient;
+
+    @Resource
+    private JdbcTemplate jdbcTemplate;
 
     @Override
     public ThumbTypeEnum getType() {
@@ -69,6 +79,38 @@ public class PostThumbHandler implements ThumbHandler {
                 .update();
 
         return result ? -1 : 0;
+    }
+
+    @Override
+    public void incrementThumbBatch(Map<Long, Long> targetCountMap) {
+        if (targetCountMap == null || targetCountMap.isEmpty()) {
+            return;
+        }
+        // 拼接批量 UPDATE：UPDATE post SET thumbNum = thumbNum + N WHERE id = ?
+        StringBuilder sql = new StringBuilder("UPDATE post SET thumbNum = CASE id ");
+        for (Map.Entry<Long, Long> entry : targetCountMap.entrySet()) {
+            sql.append("WHEN ").append(entry.getKey()).append(" THEN thumbNum + ").append(entry.getValue()).append(" ");
+        }
+        sql.append("END WHERE id IN (");
+        sql.append(targetCountMap.keySet().stream()
+                .map(String::valueOf)
+                .collect(Collectors.joining(", ")));
+        sql.append(")");
+
+        jdbcTemplate.execute(sql.toString());
+        log.debug("批量点赞聚合更新，影响 {} 条记录: {}", targetCountMap.size(), targetCountMap.keySet());
+    }
+
+    @Override
+    public void decrementThumbBatch(List<Long> targetIds) {
+        if (targetIds == null || targetIds.isEmpty()) {
+            return;
+        }
+        String sql = "UPDATE post SET thumbNum = thumbNum - 1 WHERE id IN (" +
+                targetIds.stream().map(String::valueOf).collect(Collectors.joining(", ")) +
+                ")";
+        jdbcTemplate.execute(sql);
+        log.debug("批量取消点赞聚合更新，影响 {} 条记录: {}", targetIds.size(), targetIds);
     }
 
     @Override
