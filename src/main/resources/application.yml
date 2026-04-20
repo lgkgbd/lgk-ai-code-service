@@ -25,15 +25,6 @@ spring:
     username: admin
     password: admin
     virtual-host: /
-    # 点赞消费者使用自定义 thumbBatchContainerFactory，以下为全局默认配置
-    listener:
-      simple:
-        # Channel 预取数量（影响消费端吞吐量）
-        prefetch: 100
-        # 消费者并发数
-        concurrency: 3
-        max-concurrency: 10
-        acknowledge-mode: auto
   # session 配置
   session:
     store-type: redis

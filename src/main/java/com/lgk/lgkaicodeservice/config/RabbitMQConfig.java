@@ -19,6 +19,15 @@ import org.springframework.context.annotation.Configuration;
  *                        ↓ 消费失败
  *                  thumb.dlx → thumb.dead.queue
  * </pre>
+ * <p>
+ * 消费模式：单条消费 + 内存攒批
+ * <pre>
+ * RabbitMQ 逐条投递 → ThumbEventConsumer.onMessage() 单条接收入内存队列
+ *                                    ↓
+ *               定时任务 flushBuffer() 每秒批量取出处理（真正攒批）
+ * </pre>
+ * 不再使用 Spring AMQP 的 batchListener 模式，因为生产者逐条发送的消息是独立 Delivery，
+ * batchSize 参数无法将多条独立 Delivery 攒成真正的批量 List，形同虚设。
  */
 @Configuration
 public class RabbitMQConfig {
@@ -100,7 +109,6 @@ public class RabbitMQConfig {
 
     @Bean
     public MessageConverter jsonMessageConverter() {
-        // 批量消费必须关闭 type header 匹配检查，否则 List 反序列化时类型信息不一致会报错
         Jackson2JsonMessageConverter converter = new Jackson2JsonMessageConverter();
         converter.setClassMapper(null);
         return converter;
@@ -113,34 +121,29 @@ public class RabbitMQConfig {
         return template;
     }
 
-    // ==================== 批量消费容器工厂 ====================
+    // ==================== 单条消费容器工厂 ====================
 
     /**
-     * 点赞事件批量消费容器工厂
+     * 点赞事件单条消费容器工厂
      * <p>
-     * Spring AMQP 批量消费工作原理：
-     * 1. 容器通过 Channel 的 basic.qos 预取消息（prefetchCount 控制 Channel 中未确认消息上限）
-     * 2. 容器循环调用 receive() 取消息，每次循环最多取 batchSize 条
-     * 3. 取到的消息攒成 List 后一次性投递给消费者的 List<ThumbEvent> 参数方法
-     * 4. receiveTimeout 控制单次 receive() 的等待超时，低流量时避免消息积压
+     * 消费端单条接收消息 → 攒入内存 ConcurrentLinkedQueue → 定时任务批量刷写数据库。
+     * 这种方式比 Spring AMQP 的 batchListener 更可靠：
+     * - batchListener 依赖生产者使用 BatchingRabbitTemplate 发送批量 Delivery，
+     *   但我们用的是普通 RabbitTemplate 逐条发送，每条是独立 Delivery，batchSize 形同虚设。
+     * - 内存攒批完全不依赖消息发送方式，无论生产者怎么发，消费端都能真正攒批。
      * <p>
      * 关键参数：
-     * - batchListener=true：启用批量投递模式
-     * - batchSize=50：每次循环最多取 50 条消息攒批（核心参数！默认为1，不设就不攒批）
-     * - prefetchCount=100：Channel 预取上限（>= batchSize）
-     * - receiveTimeout=10s：单次 receive 等待超时，低流量时不会积压太久
-     * - concurrency=3：3个消费线程并发处理，每个线程独立攒批
+     * - prefetchCount=50：Channel 预取上限，保证消息及时送达消费端
+     * - concurrency=3：3个消费线程并发拉取，快速入队
+     * - acknowledgeMode=AUTO：消息拉取后自动确认，由内存队列保证不丢失
      */
     @Bean
-    public SimpleRabbitListenerContainerFactory thumbBatchContainerFactory(
+    public SimpleRabbitListenerContainerFactory thumbSingleContainerFactory(
             ConnectionFactory connectionFactory) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
         factory.setMessageConverter(jsonMessageConverter());
-        factory.setBatchListener(true);
-        factory.setBatchSize(50);               // 核心：每次循环最多取50条攒批
-        factory.setPrefetchCount(100);           // Channel预取上限，>= batchSize
-        factory.setReceiveTimeout(10_000L);      // 10秒超时，低流量也不会积压
+        factory.setPrefetchCount(50);
         factory.setConcurrentConsumers(3);
         factory.setMaxConcurrentConsumers(10);
         factory.setAcknowledgeMode(org.springframework.amqp.core.AcknowledgeMode.AUTO);

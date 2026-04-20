@@ -66,13 +66,28 @@ public interface ThumbConstant {
     // ==================== 业务常量 ====================
 
     /**
-     * 批量同步时间间隔（秒）
+     * 批量同步时间间隔（秒）—— 降级路径（TempThumbStorageService）专用
      */
     int BATCH_SYNC_INTERVAL_SECONDS = 10;
 
     /**
-     * 批量同步每批次数量
+     * 批量同步每批次数量—— 降级路径（TempThumbStorageService）专用
      */
     int BATCH_SYNC_SIZE = 100;
+
+    // ==================== MQ 批量攒批常量 ====================
+
+    /**
+     * MQ 消费端内存攒批——每批次最大数量
+     * 攒够此数量时，即使定时任务没到也会在下次 flush 时全部取出处理
+     */
+    int MQ_BATCH_SIZE = 100;
+
+    /**
+     * MQ 消费端内存攒批——定时刷新间隔（毫秒）
+     * 每隔 1 秒检查一次内存队列，有数据就批量刷写到数据库
+     * 低流量时消息最多延迟 1 秒，不会积压
+     */
+    long MQ_FLUSH_INTERVAL_MS = 1000L;
 
 }
