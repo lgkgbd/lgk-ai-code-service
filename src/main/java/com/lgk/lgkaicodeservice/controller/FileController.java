@@ -16,6 +16,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
@@ -41,17 +42,23 @@ public class FileController {
     private StorageManager storageManager;
 
     /**
+     * 短链访问前缀，与 ShortLinkController 的 {@code @RequestMapping("/s")} 对应。
+     * 返回给前端的完整 URL 格式：{@code /api/s/{code}}
+     */
+    @Value("${server.servlet.context-path}")
+    private String contextPath;
+
+    /**
      * 文件上传
      * <p>
-     * 上传成功后返回短链 code（非 objectKey，也非直接 URL），彻底屏蔽存储位置信息。
-     * 客户端拿到 code 后，通过 {@code GET /api/s/{code}} 解析出 objectKey，
-     * 再由业务层决定如何构建实际可访问的 URL（预签名 URL / CDN 地址等）。
+     * 上传成功后返回完整的短链访问 URL（如 {@code /api/s/aB3xY9}），
+     * 前端可直接用作 {@code <img src>}、{@code <a href>} 等属性值，无需额外拼接前缀。
      * </p>
      *
      * @param multipartFile     上传的文件（不超过 1MB）
      * @param uploadFileRequest 上传业务类型
      * @param request           HTTP 请求
-     * @return 短链 code，例如 {@code aB3xY9}
+     * @return 完整的短链 URL，例如 {@code /api/s/aB3xY9}
      */
     @PostMapping("/upload")
     @AuthCheck(mustRole = UserConstant.DEFAULT_ROLE)
@@ -71,8 +78,10 @@ public class FileController {
         try {
             // 上传到 MinIO 并自动创建短链，返回短链 code
             String shortCode = storageManager.uploadMultipartFile(filepath, multipartFile);
-            log.info("文件上传成功，短链 code={}, filepath={}", shortCode, filepath);
-            return ResultUtils.success(shortCode);
+            // 拼接完整的短链访问 URL，前端可直接用作 img src / a href
+            String shortUrl = String.format("%s/s/%s", contextPath, shortCode);
+            log.info("文件上传成功，短链 code={}, url={}, filepath={}", shortCode, shortUrl, filepath);
+            return ResultUtils.success(shortUrl);
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
