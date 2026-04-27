@@ -103,10 +103,10 @@ public class StorageManager {
     /**
      * 删除对象（使用默认桶），同步删除短链
      *
-     * @param key      对象键
+     * @param key       对象键
      * @param shortCode 对应短链 code（传 null 则不删短链）
      */
-    public void deleteFile(String key, String shortCode) {
+    public void deleteFileWithShortCode(String key, String shortCode) {
         fileStorageStrategy.deleteFile(key);
         if (shortCode != null) {
             shortLinkService.deleteShortLink(shortCode);
