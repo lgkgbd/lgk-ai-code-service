@@ -94,14 +94,15 @@ langchain4j:
       log-responses: true
 
 
-# 添加 COS 对象存储配置（需要从腾讯云获取）
-cos:
-  client:
-    host: your-custom-domain.com
-    secretId: your-secret-id
-    secretKey: your-secret-key
-    region: ap-shanghai
-    bucket: your-bucket-name
+# 对象存储配置
+storage:
+  minio:
+    endpoint: http://localhost:9000
+    access-key: admin
+    secret-key: 12345678
+    bucket: lgk-ai-code-service
+    # 文件大小限制：1MB = 1048576 字节
+    max-file-size-bytes: 1048576
 
 # Pexels 图片搜索配置
 pexels:

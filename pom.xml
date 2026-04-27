@@ -139,10 +139,11 @@
             <version>6.1.0</version>
         </dependency>
 
+        <!-- MinIO 对象存储 SDK -->
         <dependency>
-            <groupId>com.qcloud</groupId>
-            <artifactId>cos_api</artifactId>
-            <version>5.6.227</version>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.11</version>
         </dependency>
 
         <!-- LangGraph4j -->

@@ -9,7 +9,7 @@ import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
 import com.lgk.lgkaicodeservice.langgraph4j.model.ImageResource;
 import com.lgk.lgkaicodeservice.langgraph4j.model.enums.ImageCategoryEnum;
-import com.lgk.lgkaicodeservice.manager.CosManager;
+import com.lgk.lgkaicodeservice.manager.StorageManager;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import jakarta.annotation.Resource;
@@ -26,7 +26,7 @@ import java.util.List;
 public class MermaidDiagramTool {
 
     @Resource
-    private CosManager cosManager;
+    private StorageManager storageManager;
     
     @Tool("将 Mermaid 代码转换为架构图图片，用于展示系统结构和技术关系")
     public List<ImageResource> generateMermaidDiagram(@P("Mermaid 图表代码") String mermaidCode,
@@ -37,17 +37,17 @@ public class MermaidDiagramTool {
         try {
             // 转换为SVG图片
             File diagramFile = convertMermaidToSvg(mermaidCode);
-            // 上传到COS
-            String keyName = String.format("/mermaid/%s/%s",
+            // 上传到对象存储，返回 key
+            String keyName = String.format("mermaid/%s/%s",
                     RandomUtil.randomString(5), diagramFile.getName());
-            String cosUrl = cosManager.uploadFile(keyName, diagramFile);
+            String objectKey = storageManager.uploadFile(keyName, diagramFile);
             // 清理临时文件
             FileUtil.del(diagramFile);
-            if (StrUtil.isNotBlank(cosUrl)) {
+            if (StrUtil.isNotBlank(objectKey)) {
                 return Collections.singletonList(ImageResource.builder()
                         .category(ImageCategoryEnum.ARCHITECTURE)
                         .description(description)
-                        .url(cosUrl)
+                        .url(objectKey)
                         .build());
             }
         } catch (Exception e) {

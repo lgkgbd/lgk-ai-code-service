@@ -40,3 +40,10 @@ application-prod.yml
 
 ### 测试文件 ###
 tmp
+
+
+
+
+
+
+.workbuddy/*

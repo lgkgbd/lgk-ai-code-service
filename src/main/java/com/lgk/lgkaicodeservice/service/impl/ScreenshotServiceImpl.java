@@ -4,7 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
 import com.lgk.lgkaicodeservice.exception.ThrowUtils;
-import com.lgk.lgkaicodeservice.manager.CosManager;
+import com.lgk.lgkaicodeservice.manager.StorageManager;
 import com.lgk.lgkaicodeservice.service.ScreenshotService;
 import com.lgk.lgkaicodeservice.utils.WebScreenshotUtils;
 import jakarta.annotation.Resource;
@@ -21,7 +21,7 @@ import java.util.UUID;
 public class ScreenshotServiceImpl implements ScreenshotService {
 
     @Resource
-    private CosManager cosManager;
+    private StorageManager storageManager;
 
     @Override
     public String generateAndUploadScreenshot(String webUrl) {
@@ -31,11 +31,12 @@ public class ScreenshotServiceImpl implements ScreenshotService {
         String localScreenshotPath = WebScreenshotUtils.saveWebPageScreenshot(webUrl);
         ThrowUtils.throwIf(StrUtil.isBlank(localScreenshotPath), ErrorCode.OPERATION_ERROR, "本地截图生成失败");
         try {
-            // 2. 上传到对象存储
-            String cosUrl = uploadScreenshotToCos(localScreenshotPath);
-            ThrowUtils.throwIf(StrUtil.isBlank(cosUrl), ErrorCode.OPERATION_ERROR, "截图上传对象存储失败");
-            log.info("网页截图生成并上传成功: {} -> {}", webUrl, cosUrl);
-            return cosUrl;
+            // 2. 上传到对象存储，自动创建短链，获取短链 code
+            String shortCode = uploadScreenshot(localScreenshotPath);
+            ThrowUtils.throwIf(StrUtil.isBlank(shortCode), ErrorCode.OPERATION_ERROR, "截图上传对象存储失败");
+            log.info("网页截图生成并上传成功: {} -> shortCode={}", webUrl, shortCode);
+            // 返回短链 code，由短链服务负责映射到实际访问 URL
+            return shortCode;
         } finally {
             // 3. 清理本地文件
             cleanupLocalFile(localScreenshotPath);
@@ -43,12 +44,12 @@ public class ScreenshotServiceImpl implements ScreenshotService {
     }
 
     /**
-     * 上传截图到对象存储
+     * 上传截图到对象存储，返回短链 code
      *
      * @param localScreenshotPath 本地截图路径
-     * @return 对象存储访问URL，失败返回null
+     * @return 短链 code；失败返回 null
      */
-    private String uploadScreenshotToCos(String localScreenshotPath) {
+    private String uploadScreenshot(String localScreenshotPath) {
         if (StrUtil.isBlank(localScreenshotPath)) {
             return null;
         }
@@ -57,19 +58,19 @@ public class ScreenshotServiceImpl implements ScreenshotService {
             log.error("截图文件不存在: {}", localScreenshotPath);
             return null;
         }
-        // 生成 COS 对象键
+        // 生成对象键
         String fileName = UUID.randomUUID().toString().substring(0, 8) + "_compressed.jpg";
-        String cosKey = generateScreenshotKey(fileName);
-        return cosManager.uploadFile(cosKey, screenshotFile);
+        String key = generateScreenshotKey(fileName);
+        return storageManager.uploadFile(key, screenshotFile);
     }
 
     /**
      * 生成截图的对象存储键
-     * 格式：/screenshots/2025/07/31/filename.jpg
+     * 格式：screenshots/2025/07/31/filename.jpg
      */
     private String generateScreenshotKey(String fileName) {
         String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-        return String.format("/screenshots/%s/%s", datePath, fileName);
+        return String.format("screenshots/%s/%s", datePath, fileName);
     }
 
     /**
@@ -86,3 +87,4 @@ public class ScreenshotServiceImpl implements ScreenshotService {
         }
     }
 }
+
