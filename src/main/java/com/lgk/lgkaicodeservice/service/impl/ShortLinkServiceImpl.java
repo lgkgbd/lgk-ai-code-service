@@ -13,7 +13,7 @@ import org.redisson.api.RedissonClient;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
+import java.security.SecureRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -21,15 +21,14 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * 核心流程：
  * <pre>
- * 创建短链：
- *   1. 从 Redis 自增序列 incr(short:link:seq) 获取唯一 ID
- *   2. 对 ID 做 Base62 编码，得到 6 位短 code
- *   3. 将 code -> objectKey 存入 Redis（短链默认永久有效，可按需设 TTL）
- *   4. 将 code 加入布隆过滤器
- *   5. 返回 code
+ * 创建短链（随机码 + SETNX 防碰撞）：
+ *   1. 用 SecureRandom 生成 6 位随机 Base62 码
+ *   2. 用 Redis SETNX 原子写入 short:link:{code} -> objectKey（碰撞则重试，上限 10 次）
+ *   3. 将 code 加入布隆过滤器
+ *   4. 返回 code
  *
  * 解析短链：
- *   1. 先查布隆过滤器，code 不存在 → 直接返回 null（防穿透）
+ *   1. 先查布隆过滤器，code 一定不存在 → 直接返回 null（防穿透）
  *   2. 查 Redis short:link:{code} → 得到 objectKey
  *   3. objectKey 为空说明已过期或被删 → 返回 null
  * </pre>
@@ -71,24 +70,33 @@ public class ShortLinkServiceImpl implements ShortLinkService {
         log.info("短链布隆过滤器初始化完成，预期容量={}，误判率={}", BLOOM_EXPECTED_INSERTIONS, BLOOM_FALSE_PROBABILITY);
     }
 
+    /**
+     * SecureRandom 实例（线程安全，重用）
+     */
+    private final SecureRandom secureRandom = new SecureRandom();
+
+    /** 随机码最大重试次数（防碰撞） */
+    private static final int MAX_RETRY = 10;
+
     @Override
     public String createShortLink(String objectKey) {
         if (StrUtil.isBlank(objectKey)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "objectKey 不能为空");
         }
-        // 1. 自增序列 → Base62 编码
-        Long seq = stringRedisTemplate.opsForValue().increment(RedisConstant.SHORT_LINK_SEQ_KEY);
-        if (seq == null) {
-            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "短链序列生成失败");
+        // 用 SecureRandom 生成随机 code，SETNX 防碰撞，上限 MAX_RETRY 次
+        for (int i = 0; i < MAX_RETRY; i++) {
+            String code = generateRandomCode();
+            String redisKey = RedisConstant.getShortLinkKey(code);
+            // SETNX 原子写入：key 不存在才写入，成功返回 true
+            Boolean ok = stringRedisTemplate.opsForValue().setIfAbsent(redisKey, objectKey);
+            if (Boolean.TRUE.equals(ok)) {
+                bloomFilter.add(code);
+                log.info("短链创建成功，code={}, objectKey={}", code, objectKey);
+                return code;
+            }
+            log.debug("短链随机码碰撞，code={}，重试第 {} 次", code, i + 1);
         }
-        String code = toBase62(seq);
-        // 2. 存储映射 short:link:{code} -> objectKey（永久有效，不设 TTL）
-        String redisKey = RedisConstant.getShortLinkKey(code);
-        stringRedisTemplate.opsForValue().set(redisKey, objectKey);
-        // 3. 加入布隆过滤器
-        bloomFilter.add(code);
-        log.info("短链创建成功，code={}, objectKey={}", code, objectKey);
-        return code;
+        throw new BusinessException(ErrorCode.SYSTEM_ERROR, "短链生成失败（碰撞次数超限），请稍后重试");
     }
 
     @Override
@@ -124,26 +132,15 @@ public class ShortLinkServiceImpl implements ShortLinkService {
     // ----------------------------- 私有方法 -----------------------------
 
     /**
-     * 将长整型数字转换为 Base62 字符串
-     * 长度不足 CODE_LENGTH 时左侧补 '0'
+     * 用 SecureRandom 生成随机 Base62 字符串
      *
-     * @param num 正整数（Redis INCR 从 1 开始）
-     * @return Base62 编码字符串
+     * @return 随机短码，例如 {@code aB3xY9}
      */
-    private String toBase62(long num) {
-        if (num <= 0) {
-            return "000000";
+    private String generateRandomCode() {
+        StringBuilder sb = new StringBuilder(CODE_LENGTH);
+        for (int i = 0; i < CODE_LENGTH; i++) {
+            sb.append(BASE62.charAt(secureRandom.nextInt(BASE62.length())));
         }
-        StringBuilder sb = new StringBuilder();
-        while (num > 0) {
-            sb.append(BASE62.charAt((int) (num % 62)));
-            num /= 62;
-        }
-        // 补齐 CODE_LENGTH 位
-        while (sb.length() < CODE_LENGTH) {
-            sb.append('0');
-        }
-        // 反转（低位先入）
-        return sb.reverse().toString();
+        return sb.toString();
     }
 }

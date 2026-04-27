@@ -53,4 +53,12 @@ public interface FileStorageStrategy {
      * @return 桶名
      */
     String getDefaultBucket();
+
+    /**
+     * 读取文件流（用于短链访问时的流转发）
+     *
+     * @param key 对象键
+     * @return 输入流；文件不存在时返回 null
+     */
+    java.io.InputStream getFileStream(String key);
 }

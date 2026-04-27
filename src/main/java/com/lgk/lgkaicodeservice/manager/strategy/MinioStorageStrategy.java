@@ -4,6 +4,7 @@ import com.lgk.lgkaicodeservice.config.MinioProperties;
 import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
 import com.lgk.lgkaicodeservice.manager.FileStorageStrategy;
+import io.minio.GetObjectArgs;
 import io.minio.*;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -127,6 +128,30 @@ public class MinioStorageStrategy implements FileStorageStrategy {
     private String normalizeKey(String key) {
         if (key == null) return "";
         return key.startsWith("/") ? key.substring(1) : key;
+    }
+
+    @Override
+    public InputStream getFileStream(String key) {
+        String objectKey = normalizeKey(key);
+        String bucket = minioProperties.getBucket();
+        try {
+            return minioClient.getObject(
+                    GetObjectArgs.builder()
+                            .bucket(bucket)
+                            .object(objectKey)
+                            .build()
+            );
+        } catch (Exception e) {
+            // MinIO SDK 的 ErrorResponseException 继承自 S3ErrorResponseException，
+            // 用通用的 Exception 捕获最省事，直接判断异常消息即可
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("NoSuchKey") || msg.contains("object does not exist")) {
+                log.warn("MinIO 文件不存在，bucket={}, key={}", bucket, objectKey);
+                return null;
+            }
+            log.error("MinIO 读取文件异常，bucket={}, key={}", bucket, objectKey, e);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件读取失败：" + e.getMessage());
+        }
     }
 
     /**
