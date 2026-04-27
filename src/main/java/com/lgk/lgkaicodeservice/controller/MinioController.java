@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -37,6 +38,12 @@ public class MinioController {
 
     @Resource
     private StorageManager storageManager;
+
+    /**
+     * 短链访问前缀，与 ShortLinkController 的 {@code @RequestMapping("/s")} 对应。
+     */
+    @Value("${server.servlet.context-path}")
+    private String contextPath;
 
     // ========================== 桶管理 ==========================
 
@@ -105,15 +112,17 @@ public class MinioController {
     /**
      * 上传对象
      * <p>
-     * 返回对象的 key，业务层通过短链系统将 key 映射为访问 URL。
+     * 上传成功后返回完整的短链访问 URL（如 {@code /api/s/aB3xY9}），
+     * 前端可直接用作 {@code <img src>}、{@code <a href>} 等属性值。
      * 文件大小不超过 1MB。
      * </p>
      *
      * @param file   上传文件
      * @param prefix 存储前缀目录（可选，默认 uploads）
+     * @return 完整的短链 URL，例如 {@code /api/s/aB3xY9}
      */
     @PostMapping("/object/upload")
-    @Operation(summary = "上传对象，返回对象 key")
+    @Operation(summary = "上传对象，返回短链访问 URL")
     public BaseResponse<String> uploadObject(
             @RequestPart("file") MultipartFile file,
             @RequestParam(defaultValue = "uploads") String prefix) {
@@ -123,8 +132,9 @@ public class MinioController {
         String uuid = RandomStringUtils.randomAlphanumeric(8);
         String filename = uuid + "-" + file.getOriginalFilename();
         String key = prefix + "/" + filename;
-        String objectKey = storageManager.uploadMultipartFile(key, file);
-        return ResultUtils.success(objectKey);
+        String shortCode = storageManager.uploadMultipartFile(key, file);
+        String shortUrl = String.format("%s/s/%s", contextPath, shortCode);
+        return ResultUtils.success(shortUrl);
     }
 
     /**

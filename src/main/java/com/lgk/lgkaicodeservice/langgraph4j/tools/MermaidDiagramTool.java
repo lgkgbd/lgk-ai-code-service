@@ -14,6 +14,7 @@ import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
@@ -27,6 +28,12 @@ public class MermaidDiagramTool {
 
     @Resource
     private StorageManager storageManager;
+
+    /**
+     * 短链访问前缀，与 ShortLinkController 的 {@code @RequestMapping("/s")} 对应。
+     */
+    @Value("${server.servlet.context-path}")
+    private String contextPath;
     
     @Tool("将 Mermaid 代码转换为架构图图片，用于展示系统结构和技术关系")
     public List<ImageResource> generateMermaidDiagram(@P("Mermaid 图表代码") String mermaidCode,
@@ -44,10 +51,12 @@ public class MermaidDiagramTool {
             // 清理临时文件
             FileUtil.del(diagramFile);
             if (StrUtil.isNotBlank(objectKey)) {
+                // 拼接完整短链 URL，前端可直接访问
+                String shortUrl = String.format("%s/s/%s", contextPath, objectKey);
                 return Collections.singletonList(ImageResource.builder()
                         .category(ImageCategoryEnum.ARCHITECTURE)
                         .description(description)
-                        .url(objectKey)
+                        .url(shortUrl)
                         .build());
             }
         } catch (Exception e) {

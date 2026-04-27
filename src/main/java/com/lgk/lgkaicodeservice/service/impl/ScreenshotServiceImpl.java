@@ -9,6 +9,7 @@ import com.lgk.lgkaicodeservice.service.ScreenshotService;
 import com.lgk.lgkaicodeservice.utils.WebScreenshotUtils;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -23,6 +24,12 @@ public class ScreenshotServiceImpl implements ScreenshotService {
     @Resource
     private StorageManager storageManager;
 
+    /**
+     * 短链访问前缀，与 ShortLinkController 的 {@code @RequestMapping("/s")} 对应。
+     */
+    @Value("${server.servlet.context-path}")
+    private String contextPath;
+
     @Override
     public String generateAndUploadScreenshot(String webUrl) {
         ThrowUtils.throwIf(StrUtil.isBlank(webUrl), ErrorCode.PARAMS_ERROR, "网页URL不能为空");
@@ -34,9 +41,10 @@ public class ScreenshotServiceImpl implements ScreenshotService {
             // 2. 上传到对象存储，自动创建短链，获取短链 code
             String shortCode = uploadScreenshot(localScreenshotPath);
             ThrowUtils.throwIf(StrUtil.isBlank(shortCode), ErrorCode.OPERATION_ERROR, "截图上传对象存储失败");
-            log.info("网页截图生成并上传成功: {} -> shortCode={}", webUrl, shortCode);
-            // 返回短链 code，由短链服务负责映射到实际访问 URL
-            return shortCode;
+            // 拼接完整的短链访问 URL，调用方（如 AppServiceImpl）可直接存入 cover 字段供前端使用
+            String shortUrl = String.format("%s/s/%s", contextPath, shortCode);
+            log.info("网页截图生成并上传成功: {} -> {}", webUrl, shortUrl);
+            return shortUrl;
         } finally {
             // 3. 清理本地文件
             cleanupLocalFile(localScreenshotPath);
