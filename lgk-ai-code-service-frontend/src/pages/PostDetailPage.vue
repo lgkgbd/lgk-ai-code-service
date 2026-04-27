@@ -462,6 +462,16 @@ onMounted(() => {
   background: none;
   padding: 0;
 }
+.post-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 16px 0;
+  cursor: zoom-in;
+}
+.post-content :deep(a > img) {
+  border: none;
+}
 
 
 .comments-section-wrapper {

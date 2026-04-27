@@ -32,6 +32,47 @@ onMounted(async () => {
   contentEditor.value = new Vditor('markdown-editor', {
     height: 500,
     placeholder: '请输入正文内容...',
+    cache: {
+      enable: false,
+    },
+    upload: {
+      accept: 'image/*',
+      handler(files: File[]) {
+        // 自定义上传逻辑：将图片上传到后端，获取短链 URL 后插入编辑器
+        const file = files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/file/upload?biz=user_post');
+        xhr.withCredentials = true;
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const res = JSON.parse(xhr.responseText);
+              if (res.code === 0 && res.data) {
+                contentEditor.value?.insertValue(`\n![图片](${res.data})\n`);
+              } else {
+                showError(res.message || '图片上传失败');
+              }
+            } catch {
+              showError('图片上传失败');
+            }
+          } else {
+            showError('图片上传失败');
+          }
+        };
+
+        xhr.onerror = () => {
+          showError('图片上传出错');
+        };
+
+        xhr.send(formData);
+      },
+    },
     after: async () => {
       if (id) {
         postId.value = id;
