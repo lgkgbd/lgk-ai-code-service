@@ -17,9 +17,13 @@ public class ThumbHandlerFactory {
     @Resource
     private PostThumbHandler postThumbHandler;
 
+    @Resource
+    private CommentThumbHandler commentThumbHandler;
+
     @PostConstruct
     public void init() {
         handlerMap.put(ThumbTypeEnum.POST.getValue(), postThumbHandler);
+        handlerMap.put(ThumbTypeEnum.COMMENT.getValue(), commentThumbHandler);
     }
 
     public ThumbHandler getHandler(ThumbTypeEnum type) {

@@ -122,4 +122,35 @@ create table if not exists post_favour
     index idx_userId (userId)
 ) comment '帖子收藏表';
 
+-- 帖子表新增评论数字段
+-- ALTER TABLE post ADD COLUMN commentNum int default 0 not null comment '评论数' AFTER viewNum;
+
+-- 评论表
+create table if not exists comment
+(
+    id              bigint auto_increment comment '评论id' primary key,
+    content         text                               not null comment '评论内容',
+    images          varchar(2048)                      null comment '图片URL列表（JSON数组）',
+    targetType      tinyint                            not null comment '目标类型 0=帖子',
+    targetId        bigint                             not null comment '目标ID',
+    userId          bigint                             not null comment '评论者ID',
+    parentId        bigint   default 0                 not null comment '父评论ID，0为顶级评论',
+    rootId          bigint   default 0                 not null comment '根评论ID，0为顶级评论',
+    replyToUserId   bigint   default 0                 not null comment '被回复的用户ID，0表示无',
+    replyToContent  varchar(200) default ''            not null comment '被回复内容摘要（快照）',
+    thumbNum        int      default 0                 not null comment '点赞数',
+    replyNum        int      default 0                 not null comment '回复数',
+    createTime      datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime      datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    isDelete        tinyint  default 0                 not null comment '是否删除',
+    -- 按目标查评论（最常用）
+    index idx_target (targetType, targetId),
+    -- 查用户的评论
+    index idx_userId (userId),
+    -- 查某条评论下的所有回复
+    index idx_parent (parentId),
+    -- 按根评论聚合（两级展示时用）
+    index idx_root (rootId)
+) comment '评论表' collate = utf8mb4_unicode_ci;
+
 

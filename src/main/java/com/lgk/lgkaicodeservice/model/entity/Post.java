@@ -105,4 +105,10 @@ public class Post implements Serializable {
     @Column("priority")
     private Integer priority;
 
+    /**
+     * 评论数
+     */
+    @Column("commentNum")
+    private Integer commentNum;
+
 }
