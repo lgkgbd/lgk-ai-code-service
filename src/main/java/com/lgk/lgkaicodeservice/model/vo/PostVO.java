@@ -80,6 +80,11 @@ public class PostVO {
     private Integer priority;
 
     /**
+     * 评论数
+     */
+    private Integer commentNum;
+
+    /**
      * 是否已点赞
      */
     private Boolean hasThumb;

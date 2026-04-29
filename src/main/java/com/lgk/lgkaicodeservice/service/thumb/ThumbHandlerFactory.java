@@ -39,10 +39,14 @@ public class ThumbHandlerFactory {
     // @Resource
     // private VideoThumbHandler videoThumbHandler;
 
+    @Resource
+    private CommentThumbHandler commentThumbHandler;
+
     @PostConstruct
     public void init() {
         // 注册所有已实现的 Handler
         registerHandler(postThumbHandler);
+        registerHandler(commentThumbHandler);
         // registerHandler(imageThumbHandler);
         // registerHandler(videoThumbHandler);
     }

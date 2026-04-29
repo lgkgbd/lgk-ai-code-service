@@ -21,9 +21,9 @@ import java.util.stream.Collectors;
 public enum ThumbTypeEnum {
 
     POST("post", 0, "帖子"),
-    IMAGE("image", 1, "图片"),
-    VIDEO("video", 2, "视频"),
-    COMMENT("comment", 3, "评论");
+    COMMENT("comment", 1, "评论"),
+    IMAGE("image", 2, "图片"),
+    VIDEO("video", 3, "视频");
 
     private final String value;
     private final Integer code;
