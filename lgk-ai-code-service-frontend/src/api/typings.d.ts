@@ -1,4 +1,13 @@
 declare namespace API {
+  type AddCommentRequest = {
+    content?: string
+    images?: string[]
+    targetType?: number
+    targetId?: number
+    parentId?: number
+    replyToUserId?: number
+  }
+
   type AppAddRequest = {
     initPrompt?: string
   }
@@ -73,6 +82,18 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseListObjectInfo = {
+    code?: number
+    data?: ObjectInfo[]
+    message?: string
+  }
+
+  type BaseResponseListString = {
+    code?: number
+    data?: string[]
+    message?: string
+  }
+
   type BaseResponseLoginUserVO = {
     code?: number
     data?: LoginUserVO
@@ -94,6 +115,12 @@ declare namespace API {
   type BaseResponsePageChatHistory = {
     code?: number
     data?: PageChatHistory
+    message?: string
+  }
+
+  type BaseResponsePageCommentVO = {
+    code?: number
+    data?: PageCommentVO
     message?: string
   }
 
@@ -139,6 +166,10 @@ declare namespace API {
     message?: string
   }
 
+  type bucketExistsParams = {
+    bucketName: string
+  }
+
   type ChatHistory = {
     id?: number
     message?: string
@@ -168,8 +199,58 @@ declare namespace API {
     message: string
   }
 
+  type CommentQueryRequest = {
+    pageNum?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+    targetType?: number
+    targetId?: number
+    parentId?: number
+  }
+
+  type CommentVO = {
+    id?: number
+    content?: string
+    images?: string[]
+    targetType?: number
+    targetId?: number
+    userId?: number
+    user?: UserVO
+    parentId?: number
+    rootId?: number
+    replyToUserId?: number
+    replyToUserName?: string
+    replyToContent?: string
+    thumbNum?: number
+    replyNum?: number
+    hasThumb?: boolean
+    createTime?: string
+  }
+
+  type createBucketParams = {
+    bucketName: string
+  }
+
+  type createShortLinkParams = {
+    objectKey: string
+  }
+
+  type deleteBucketParams = {
+    bucketName: string
+  }
+
+  type deleteObjectParams = {
+    bucketName?: string
+    key: string
+  }
+
   type DeleteRequest = {
     id?: number
+  }
+
+  type deleteShortLinkParams = {
+    code: string
   }
 
   type DiagramTask = {
@@ -207,6 +288,12 @@ declare namespace API {
 
   type getPostVOByIdParams = {
     id: number
+  }
+
+  type getPresignedUrlParams = {
+    bucketName?: string
+    key: string
+    expireSeconds?: number
   }
 
   type getUserByIdParams = {
@@ -248,6 +335,12 @@ declare namespace API {
     lastCreateTime?: string
   }
 
+  type listObjectsParams = {
+    bucketName?: string
+    prefix?: string
+    maxKeys?: number
+  }
+
   type LoginUserVO = {
     id?: number
     userAccount?: string
@@ -263,6 +356,12 @@ declare namespace API {
     description?: string
   }
 
+  type ObjectInfo = {
+    key?: string
+    size?: number
+    lastModified?: string
+  }
+
   type PageAppVO = {
     records?: AppVO[]
     pageNumber?: number
@@ -274,6 +373,15 @@ declare namespace API {
 
   type PageChatHistory = {
     records?: ChatHistory[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
+  type PageCommentVO = {
+    records?: CommentVO[]
     pageNumber?: number
     pageSize?: number
     totalPage?: number
@@ -358,6 +466,7 @@ declare namespace API {
     createTime?: string
     updateTime?: string
     priority?: number
+    commentNum?: number
     hasThumb?: boolean
     hasFavour?: boolean
   }
@@ -370,6 +479,10 @@ declare namespace API {
 
   type removeParams = {
     id: number
+  }
+
+  type resolveParams = {
+    code: string
   }
 
   type SearchRequest = {
@@ -398,9 +511,11 @@ declare namespace API {
     timeout?: number
   }
 
+  type StreamingResponseBody = true
+
   type ThumbAddRequest = {
     targetId?: number
-    type?: 'POST'
+    type?: 'POST' | 'COMMENT' | 'IMAGE' | 'VIDEO'
   }
 
   type uploadFileParams = {
@@ -409,6 +524,10 @@ declare namespace API {
 
   type UploadFileRequest = {
     biz?: string
+  }
+
+  type uploadObjectParams = {
+    prefix?: string
   }
 
   type User = {

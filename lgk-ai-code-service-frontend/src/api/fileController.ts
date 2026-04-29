@@ -9,16 +9,17 @@ export async function uploadFile(
   body: {},
   options?: { [key: string]: any }
 ) {
-  const formData = new FormData()
-  formData.append('file', body as Blob)
-
   return request<API.BaseResponseString>('/file/upload', {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
     params: {
       ...params,
+      uploadFileRequest: undefined,
+      ...params['uploadFileRequest'],
     },
-    data: formData,
-    // By not specifying Content-Type, the browser will automatically set it to multipart/form-data with the correct boundary
+    data: body,
     ...(options || {}),
   })
 }
