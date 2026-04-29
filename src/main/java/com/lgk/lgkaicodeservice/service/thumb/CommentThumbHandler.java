@@ -1,5 +1,6 @@
 package com.lgk.lgkaicodeservice.service.thumb;
 
+import com.lgk.lgkaicodeservice.model.enums.ThumbTypeEnum;
 import com.mybatisflex.core.update.UpdateChain;
 import com.lgk.lgkaicodeservice.mapper.CommentMapper;
 import com.lgk.lgkaicodeservice.model.entity.Comment;
@@ -11,6 +12,11 @@ public class CommentThumbHandler implements ThumbHandler {
 
     @Resource
     private CommentMapper commentMapper;
+
+    @Override
+    public ThumbTypeEnum getType() {
+        return ThumbTypeEnum.COMMENT;
+    }
 
     @Override
     public boolean checkTargetExists(Long targetId) {

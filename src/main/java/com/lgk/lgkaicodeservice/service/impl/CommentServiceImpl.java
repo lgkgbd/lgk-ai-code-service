@@ -170,7 +170,7 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
                 .eq(Comment::getTargetType, request.getTargetType())
                 .eq(Comment::getTargetId, request.getTargetId())
                 .eq(Comment::getParentId, 0L)
-                .orderByRaw("(thumbNum + replyNum) DESC, createTime DESC");
+                .orderByUnSafely("(thumbNum + replyNum) DESC", "createTime DESC");
 
         Page<Comment> commentPage = this.page(new Page<>(request.getPageNum(), pageSize), queryWrapper);
         Page<CommentVO> voPage = new Page<>(commentPage.getPageNumber(), commentPage.getPageSize(),

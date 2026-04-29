@@ -123,7 +123,7 @@ create table if not exists post_favour
 ) comment '帖子收藏表';
 
 -- 帖子表新增评论数字段
--- ALTER TABLE post ADD COLUMN commentNum int default 0 not null comment '评论数' AFTER viewNum;
+ALTER TABLE post ADD COLUMN commentNum int default 0 not null comment '评论数' AFTER viewNum;
 
 -- 评论表
 create table if not exists comment
