@@ -15,7 +15,8 @@ import {
   DownloadOutlined,
   RocketOutlined,
   DownOutlined,
-  CheckOutlined
+  CheckOutlined,
+  ArrowLeftOutlined
 } from '@ant-design/icons-vue'
 import {
   getAppVoById,
@@ -192,12 +193,25 @@ const chatWidth = ref(400) // 聊天区域宽度
 const minChatWidth = 300 // 聊天区域最小宽度
 const minPreviewWidth = 400 // 预览区域最小宽度
 
+// 移动端适配：窄屏下对话/预览全屏切换
+const MOBILE_BREAKPOINT = 576
+const isMobile = ref(window.innerWidth <= MOBILE_BREAKPOINT)
+const mobileView = ref<'chat' | 'preview'>('chat') // 移动端当前显示的面板
+
+// 返回上一页
+const goBack = () => {
+  router.back()
+}
+
 // 计算默认宽度比例 2:3
 const defaultChatWidth = Math.floor(window.innerWidth * 0.4) // 40% 对应 2:3 比例
 chatWidth.value = Math.max(minChatWidth, Math.min(window.innerWidth - minPreviewWidth, defaultChatWidth))
 
 // 监听窗口大小变化，重新计算宽度限制
 const handleResize = () => {
+  isMobile.value = window.innerWidth <= MOBILE_BREAKPOINT
+  // 移动端为全屏切换，不参与左右宽度计算
+  if (isMobile.value) return
   const maxChatWidth = window.innerWidth - minPreviewWidth
   if (chatWidth.value > maxChatWidth) {
     chatWidth.value = maxChatWidth
@@ -927,6 +941,9 @@ onUnmounted(() => {
     <!-- 应用信息栏 -->
     <div class="app-info-bar">
       <div class="app-info-left">
+        <a-button v-if="isMobile" type="text" class="mobile-back-btn" @click="goBack" aria-label="返回">
+          <arrow-left-outlined />
+        </a-button>
         <a-dropdown v-if="appInfo">
           <a-button type="text" class="app-name-btn">
             {{ appInfo.appName || '未命名应用' }}
@@ -995,10 +1012,30 @@ onUnmounted(() => {
       </div>
     </div>
 
+    <!-- 移动端：对话 / 预览 全屏切换 -->
+    <div v-if="isMobile" class="mobile-view-switch">
+      <button
+        :class="['switch-btn', { active: mobileView === 'chat' }]"
+        @click="mobileView = 'chat'"
+      >
+        对话
+      </button>
+      <button
+        :class="['switch-btn', { active: mobileView === 'preview' }]"
+        @click="mobileView = 'preview'"
+      >
+        预览
+      </button>
+    </div>
+
     <!-- 核心内容区域 -->
     <div class="main-content" :class="{ 'dragging': isDragging }">
       <!-- 左侧对话区域 -->
-      <div class="chat-section" :style="{ width: chatWidth + 'px' }">
+      <div
+        class="chat-section"
+        :style="{ width: chatWidth + 'px' }"
+        :class="{ 'mobile-hidden': isMobile && mobileView !== 'chat' }"
+      >
         <div class="chat-header">
           <span>生成{{ appInfo?.appName || '应用' }}</span>
           <span>用户消息</span>
@@ -1099,7 +1136,10 @@ onUnmounted(() => {
       </div>
 
       <!-- 右侧网页展示区域 -->
-      <div class="preview-section">
+      <div
+        class="preview-section"
+        :class="{ 'mobile-hidden': isMobile && mobileView !== 'preview' }"
+      >
         <div class="preview-header">
           <span v-if="showWorkMode">作品展示</span>
           <span v-else>生成后的网页展示</span>
@@ -1891,17 +1931,26 @@ onUnmounted(() => {
   .app-info-right {
     width: 100%;
     justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* 移动端按钮更紧凑，避免溢出 */
+  .app-info-right .ant-btn {
+    margin-right: 0 !important;
+    font-size: 13px;
+    padding: 0 10px;
   }
 
   .main-content {
     flex-direction: column;
   }
 
+  /* 移动端为对话/预览全屏切换，单个面板占满剩余高度 */
   .chat-section {
     width: 100% !important;
-    height: 50%;
+    height: 100%;
     border-right: none;
-    border-bottom: 1px solid #e8e8e8;
   }
 
   .resize-handle {
@@ -1909,7 +1958,46 @@ onUnmounted(() => {
   }
 
   .preview-section {
-    height: 50%;
+    height: 100%;
   }
+}
+
+/* 移动端：被切换隐藏的面板 */
+.mobile-hidden {
+  display: none !important;
+}
+
+/* 移动端对话/预览切换条 */
+.mobile-view-switch {
+  display: flex;
+  gap: 6px;
+  padding: 8px 12px;
+  background: white;
+  border-bottom: 1px solid #e8e8e8;
+  flex-shrink: 0;
+}
+
+.mobile-view-switch .switch-btn {
+  flex: 1;
+  height: 34px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fafafa;
+  color: #555;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mobile-view-switch .switch-btn.active {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: #fff;
+}
+
+.mobile-back-btn {
+  padding: 0 8px;
+  font-size: 18px;
 }
 </style>

@@ -23,10 +23,14 @@
         v-if="!props.hideSearch"
         v-model:value="searchStore.headerSearchText"
         placeholder="搜索"
+        class="header-search"
         style="width: 200px; margin-left: 16px"
         @search="onSearch"
       />
       <div class="right">
+        <a-button class="mobile-nav-toggle" type="text" @click="drawerOpen = true" aria-label="菜单">
+          <MenuOutlined />
+        </a-button>
         <div class="user-login-status">
           <div v-if="loginUserStore.loginUser.id" class="user-info">
             <a-dropdown overlayClassName="user-dropdown-overlay">
@@ -58,6 +62,26 @@
         </div>
       </div>
     </div>
+
+    <!-- 移动端导航抽屉 -->
+    <a-drawer
+      v-model:open="drawerOpen"
+      placement="left"
+      title="菜单"
+      :width="240"
+      class="mobile-nav-drawer"
+      :body-style="{ padding: '8px 0' }"
+    >
+      <a
+        v-for="item in filteredMenuItems"
+        :key="item.key"
+        class="mobile-nav-link"
+        :class="{ active: isMenuItemActive(item) }"
+        @click="onMobileMenuClick(item.path)"
+      >
+        {{ item.label }}
+      </a>
+    </a-drawer>
   </a-layout-header>
 </template>
 
@@ -66,7 +90,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { useSearchStore } from '@/stores/searchStore.ts'
-import { LogoutOutlined, UserOutlined } from '@ant-design/icons-vue'
+import { LogoutOutlined, UserOutlined, MenuOutlined } from '@ant-design/icons-vue'
 import { userLogout } from '@/api/userController.ts'
 import { message } from 'ant-design-vue'
 import checkAccess from '@/access/checkAccess.ts'
@@ -87,6 +111,15 @@ const loginUserStore = useLoginUserStore()
 const searchStore = useSearchStore()
 const route = useRoute()
 const router = useRouter()
+
+// 移动端导航抽屉开关
+const drawerOpen = ref(false)
+
+// 移动端菜单点击：跳转并关闭抽屉
+function onMobileMenuClick(path: string) {
+  onMenuItemClick(path)
+  drawerOpen.value = false
+}
 
 watch(
   () => route.query.text,
@@ -329,6 +362,15 @@ const onSearch = (value: string) => {
   font-weight: 500;
 }
 
+/* 移动端汉堡按钮（默认隐藏，窄屏显示） */
+.mobile-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  padding: 4px 8px;
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .global-header {
@@ -360,6 +402,16 @@ const onSearch = (value: string) => {
 
   .header-inner {
     justify-content: space-between;
+    gap: 8px;
+  }
+
+  /* 窄屏隐藏顶部搜索框，改用汉堡菜单导航 */
+  .header-search {
+    display: none !important;
+  }
+
+  .mobile-nav-toggle {
+    display: inline-flex;
   }
 }
 /* 使退出登录在 Dropdown overlay 中强制为红色（包含图标与文字，悬停亦保持） */
@@ -393,4 +445,29 @@ const onSearch = (value: string) => {
   color: #ff4d4f !important;
 }
 
+</style>
+
+<!-- 抽屉内容会被 teleport 到 body，需用非 scoped 样式 -->
+<style>
+.mobile-nav-drawer .mobile-nav-link {
+  display: block;
+  padding: 14px 24px;
+  font-size: 16px;
+  color: #333;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.mobile-nav-drawer .mobile-nav-link:hover {
+  background: #f5f5f5;
+  color: #1890ff;
+}
+
+.mobile-nav-drawer .mobile-nav-link.active {
+  background: #e6f7ff;
+  color: #1890ff;
+  font-weight: 600;
+  border-right: 3px solid #1890ff;
+}
 </style>
