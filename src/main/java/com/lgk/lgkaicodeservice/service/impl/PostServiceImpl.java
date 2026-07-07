@@ -7,13 +7,17 @@ import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.*;
 import com.lgk.lgkaicodeservice.constant.CommonConstant;
 import com.lgk.lgkaicodeservice.constant.ThumbConstant;
+import com.lgk.lgkaicodeservice.mapper.CommentMapper;
 import com.lgk.lgkaicodeservice.mapper.PostFavourMapper;
 import com.lgk.lgkaicodeservice.mapper.ThumbMapper;
 import com.lgk.lgkaicodeservice.model.dto.post.PostEsDTO;
+import com.lgk.lgkaicodeservice.model.entity.Comment;
 import com.lgk.lgkaicodeservice.model.entity.PostFavour;
 import com.lgk.lgkaicodeservice.model.entity.Thumb;
 import com.lgk.lgkaicodeservice.model.entity.User;
+import com.lgk.lgkaicodeservice.model.enums.CommentTargetTypeEnum;
 import com.lgk.lgkaicodeservice.model.enums.ThumbTypeEnum;
+import com.lgk.lgkaicodeservice.model.vo.CommentVO;
 import com.lgk.lgkaicodeservice.model.vo.UserVO;
 import com.lgk.lgkaicodeservice.service.ThumbService;
 import com.lgk.lgkaicodeservice.service.UserService;
@@ -75,6 +79,9 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
 
     @Resource
     private PostFavourMapper postFavourMapper;
+
+    @Resource
+    private CommentMapper commentMapper;
 
     @Resource
     private RedissonClient redissonClient;
@@ -519,6 +526,9 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             List<PostFavour> postFavourList = postFavourMapper.selectListByQuery(postFavourQueryWrapper);
             postFavourList.forEach(postFavour -> postIdHasFavourMap.put(postFavour.getPostId(), true));
         }
+        // 3. 批量获取每个帖子的置顶评论（列表页预览用）
+        Set<Long> postIdSet = postList.stream().map(Post::getId).collect(Collectors.toSet());
+        Map<Long, CommentVO> postIdTopCommentMap = getTopCommentMap(postIdSet);
         // 填充信息
         List<PostVO> postVOList = postList.stream().map(post -> {
             PostVO postVO = PostVO.objToVo(post);
@@ -530,11 +540,50 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             postVO.setUser(userService.getUserVO(user));
             postVO.setHasThumb(postIdHasThumbMap.getOrDefault(post.getId(), false));
             postVO.setHasFavour(postIdHasFavourMap.getOrDefault(post.getId(), false));
+            postVO.setTopComment(postIdTopCommentMap.get(post.getId()));
 
             return postVO;
         }).collect(Collectors.toList());
         postVOPage.setRecords(postVOList);
         return postVOPage;
+    }
+
+    /**
+     * 批量查询每个帖子的置顶评论：取点赞最多的顶级评论，点赞数相同则取最早发布的一条
+     */
+    private Map<Long, CommentVO> getTopCommentMap(Set<Long> postIdSet) {
+        if (CollectionUtils.isEmpty(postIdSet)) {
+            return Collections.emptyMap();
+        }
+
+        QueryWrapper queryWrapper = QueryWrapper.create()
+                .eq(Comment::getTargetType, CommentTargetTypeEnum.POST.getValue())
+                .in(Comment::getTargetId, postIdSet)
+                .eq(Comment::getParentId, 0L);
+        List<Comment> comments = commentMapper.selectListByQuery(queryWrapper);
+        if (CollectionUtils.isEmpty(comments)) {
+            return Collections.emptyMap();
+        }
+
+        Comparator<Comment> byThumbThenEarliest = Comparator
+                .comparing((Comment c) -> Optional.ofNullable(c.getThumbNum()).orElse(0))
+                .thenComparing(Comparator.comparing(Comment::getCreateTime).reversed());
+        Map<Long, Comment> postIdTopCommentEntityMap = comments.stream()
+                .collect(Collectors.groupingBy(Comment::getTargetId,
+                        Collectors.collectingAndThen(Collectors.maxBy(byThumbThenEarliest), Optional::get)));
+
+        Set<Long> commenterIdSet = postIdTopCommentEntityMap.values().stream()
+                .map(Comment::getUserId).collect(Collectors.toSet());
+        Map<Long, User> commenterMap = userService.listByIds(commenterIdSet).stream()
+                .collect(Collectors.toMap(User::getId, u -> u, (a, b) -> a));
+
+        Map<Long, CommentVO> result = new HashMap<>();
+        postIdTopCommentEntityMap.forEach((postId, comment) -> {
+            CommentVO vo = CommentVO.objToVo(comment);
+            vo.setUser(userService.getUserVO(commenterMap.get(comment.getUserId())));
+            result.put(postId, vo);
+        });
+        return result;
     }
 
 

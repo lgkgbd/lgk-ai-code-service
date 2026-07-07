@@ -470,6 +470,7 @@ declare namespace API {
     commentNum?: number
     hasThumb?: boolean
     hasFavour?: boolean
+    topComment?: CommentVO
   }
 
   type QualityResult = {

@@ -95,6 +95,11 @@ public class PostVO {
     private Boolean hasFavour;
 
     /**
+     * 列表页展示用的置顶评论（点赞最多，同赞数取最早发布的一条）
+     */
+    private CommentVO topComment;
+
+    /**
      * 包装类转对象
      *
      * @param postVO

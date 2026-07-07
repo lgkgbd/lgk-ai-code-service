@@ -144,14 +144,28 @@
             </div>
           </div>
 
-          <div class="post-content">
-            <h3 v-if="post.title" class="post-title" @click.stop="handlePostClick(post.id)">{{ post.title }}</h3>
-            <div class="post-text">{{ truncateText(post.content) }}</div>
-            <div v-if="post.tags && post.tags.length > 0" class="post-tags">
-              <a-tag v-for="tag in parseTags(post.tags)" :key="tag" color="blue" class="post-tag">
-                {{ tag }}
-              </a-tag>
+          <div class="post-body">
+            <div class="post-content">
+              <h3 v-if="post.title" class="post-title" @click.stop="handlePostClick(post.id)">{{ post.title }}</h3>
+              <div class="post-text">{{ getPreviewText(post.content) }}</div>
+              <div
+                v-if="isPreviewTruncated(post.content)"
+                class="view-full"
+                @click.stop="handlePostClick(post.id)"
+              >
+                查看全文
+              </div>
+              <div v-if="post.tags && post.tags.length > 0" class="post-tags">
+                <a-tag v-for="tag in parseTags(post.tags)" :key="tag" color="blue" class="post-tag">
+                  {{ tag }}
+                </a-tag>
+              </div>
+              <div v-if="post.topComment" class="post-top-comment">
+                <span class="top-comment-user">{{ post.topComment.user?.userName || '匿名用户' }}：</span>
+                <span class="top-comment-text">{{ truncateText(post.topComment.content, 60) }}</span>
+              </div>
             </div>
+            <img v-if="getCoverImage(post)" :src="getCoverImage(post)" class="post-cover" alt="" />
           </div>
 
           <div class="post-actions">
@@ -462,6 +476,40 @@ const parseTags = (tags: string[] | string | undefined) => {
   }
   return []
 }
+
+// 提取列表缩略图：优先使用封面图，否则取正文 Markdown 中的第一张图片
+const coverImageCache = new WeakMap<API.PostVO, string | null>()
+const getCoverImage = (post: API.PostVO) => {
+  if (coverImageCache.has(post)) {
+    return coverImageCache.get(post)
+  }
+  const firstMarkdownImage = post.content?.match(/!\[[^\]]*\]\(([^)\s]+)\)/)?.[1]
+  const cover = post.coverImage || firstMarkdownImage || null
+  coverImageCache.set(post, cover)
+  return cover
+}
+
+// 列表预览截断长度
+const PREVIEW_LENGTH = 100
+
+// 把正文 Markdown 剥离为纯文本（移除图片、保留链接文字、去掉标题/加粗等符号）
+const stripMarkdown = (content: string | undefined) => {
+  if (!content) return ''
+  return content
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')     // 移除图片 ![alt](url)
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')   // 链接只保留文字 [text](url) -> text
+    .replace(/^#{1,6}\s+/gm, '')               // 移除标题符号 #
+    .replace(/(\*\*|__|\*|_|`|~~)/g, '')       // 移除加粗/斜体/行内代码/删除线符号
+    .replace(/^>\s?/gm, '')                    // 移除引用符号 >
+    .replace(/\s+/g, ' ')                      // 折叠所有空白为单个空格
+    .trim()
+}
+
+// 列表预览文本
+const getPreviewText = (content: string | undefined) => truncateText(stripMarkdown(content), PREVIEW_LENGTH)
+
+// 预览是否被截断（用于决定是否展示"查看全文"）
+const isPreviewTruncated = (content: string | undefined) => stripMarkdown(content).length > PREVIEW_LENGTH
 
 // 截断文本
 const truncateText = (text: string | undefined, length = 100) => {
@@ -964,8 +1012,55 @@ onUnmounted(() => {
   color: #999;
 }
 
-.post-content {
+.post-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
   margin-bottom: 16px;
+}
+
+.post-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.post-cover {
+  width: 200px;
+  aspect-ratio: 16 / 9;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #f0f0f0;
+}
+
+.view-full {
+  display: inline-block;
+  margin-top: 4px;
+  color: #1890ff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.view-full:hover {
+  text-decoration: underline;
+}
+
+.post-top-comment {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #fafafa;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #666;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-comment-user {
+  color: #333;
+  font-weight: 500;
 }
 
 .post-title {
@@ -1052,6 +1147,10 @@ onUnmounted(() => {
 
   .post-item {
     padding: 16px;
+  }
+
+  .post-cover {
+    width: 120px;
   }
 }
 </style>
