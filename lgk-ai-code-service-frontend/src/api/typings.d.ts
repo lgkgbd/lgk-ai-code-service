@@ -457,6 +457,7 @@ declare namespace API {
     id?: number
     title?: string
     content?: string
+    plainTextDescription?: string
     tags?: string[]
     coverImage?: string
     thumbNum?: number

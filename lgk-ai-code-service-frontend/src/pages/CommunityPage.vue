@@ -105,7 +105,7 @@
           搜索
         </a-button>
       </div>
-      <div v-if="searchKeyword && searchResults.length === 0 && !isSearching" class="no-results">
+      <div v-if="searchKeyword && posts.length === 0 && !isLoading && !isSearching" class="no-results">
         没有找到相关内容
       </div>
     </div>
@@ -147,9 +147,9 @@
           <div class="post-body">
             <div class="post-content">
               <h3 v-if="post.title" class="post-title" @click.stop="handlePostClick(post.id)">{{ post.title }}</h3>
-              <div class="post-text">{{ getPreviewText(post.content) }}</div>
+              <div class="post-text">{{ getPreviewText(post) }}</div>
               <div
-                v-if="isPreviewTruncated(post.content)"
+                v-if="isPreviewTruncated(post)"
                 class="view-full"
                 @click.stop="handlePostClick(post.id)"
               >
@@ -276,13 +276,10 @@ const isLoading = ref(false)
 
 // 搜索相关
 const searchKeyword = ref('')
-const searchResults = ref<API.PostVO[]>([])
 const isSearching = ref(false)
 
-// 显示的帖子列表（搜索时显示搜索结果，否则显示全部帖子）
-const displayPosts = computed(() => {
-  return searchKeyword.value ? searchResults.value : posts.value
-})
+// 显示的帖子列表（搜索结果由后端返回后同样写入 posts）
+const displayPosts = computed(() => posts.value)
 
 // 当前标签页标题
 const currentTabLabel = computed(() => {
@@ -312,6 +309,11 @@ const loadPosts = async (loadMore = false) => {
       pageSize: pagination.pageSize,
       sortField: 'createTime',
       sortOrder: 'desc'
+    }
+    // 关键词搜索交给后端（对标题/正文全库模糊查询）
+    const keyword = searchKeyword.value.trim()
+    if (keyword) {
+      params.searchText = keyword
     }
 
     let res: any
@@ -457,9 +459,8 @@ const handleTabChange = (tabKey: string) => {
   // 重置分页状态
   pagination.current = 1
   pagination.total = 0
-  // 清空搜索结果
+  // 清空搜索关键词
   searchKeyword.value = ''
-  searchResults.value = []
   loadPosts()
 }
 
@@ -477,7 +478,8 @@ const parseTags = (tags: string[] | string | undefined) => {
   return []
 }
 
-// 提取列表缩略图：优先使用封面图，否则取正文 Markdown 中的第一张图片
+// 提取列表缩略图：后端已在列表接口填充 coverImage（正文首图或显式封面），
+// 这里直接使用；兜底再从正文 Markdown 提取一次（如详情页数据）
 const coverImageCache = new WeakMap<API.PostVO, string | null>()
 const getCoverImage = (post: API.PostVO) => {
   if (coverImageCache.has(post)) {
@@ -492,7 +494,7 @@ const getCoverImage = (post: API.PostVO) => {
 // 列表预览截断长度
 const PREVIEW_LENGTH = 100
 
-// 把正文 Markdown 剥离为纯文本（移除图片、保留链接文字、去掉标题/加粗等符号）
+// 把正文 Markdown 剥离为纯文本（兜底用；列表页正文已由后端剥离为 plainTextDescription）
 const stripMarkdown = (content: string | undefined) => {
   if (!content) return ''
   return content
@@ -505,11 +507,17 @@ const stripMarkdown = (content: string | undefined) => {
     .trim()
 }
 
-// 列表预览文本
-const getPreviewText = (content: string | undefined) => truncateText(stripMarkdown(content), PREVIEW_LENGTH)
+// 列表预览文本：优先使用后端返回的纯文本摘要，兜底从正文剥离
+const getPreviewText = (post: API.PostVO) => {
+  if (post.plainTextDescription != null) return post.plainTextDescription
+  return truncateText(stripMarkdown(post.content), PREVIEW_LENGTH)
+}
 
-// 预览是否被截断（用于决定是否展示"查看全文"）
-const isPreviewTruncated = (content: string | undefined) => stripMarkdown(content).length > PREVIEW_LENGTH
+// 预览是否被截断（用于决定是否展示"查看全文"）：后端摘要以省略号结尾表示被截断
+const isPreviewTruncated = (post: API.PostVO) => {
+  if (post.plainTextDescription != null) return post.plainTextDescription.endsWith('…')
+  return stripMarkdown(post.content).length > PREVIEW_LENGTH
+}
 
 // 截断文本
 const truncateText = (text: string | undefined, length = 100) => {
@@ -543,29 +551,10 @@ const handleClickOutside = (event: Event) => {
 
 // 搜索功能
 const handleSearch = async () => {
-  if (!searchKeyword.value.trim()) {
-    searchResults.value = []
-    return
-  }
-
+  // 走后端搜索：把关键词作为 searchText 传给列表接口，由后端对标题/正文全库模糊查询
   isSearching.value = true
   try {
-    // 在本地帖子中搜索
-    const keyword = searchKeyword.value.toLowerCase()
-    searchResults.value = posts.value.filter(post => {
-      const title = (post.title || '').toLowerCase()
-      const content = (post.content || '').toLowerCase()
-      const userName = (post.user?.userName || '').toLowerCase()
-      const tags = parseTags(post.tags).join(' ').toLowerCase()
-
-      return title.includes(keyword) ||
-             content.includes(keyword) ||
-             userName.includes(keyword) ||
-             tags.includes(keyword)
-    })
-  } catch (error) {
-    console.error('搜索失败:', error)
-    showError('搜索失败，请稍后重试')
+    await loadPosts()
   } finally {
     isSearching.value = false
   }
@@ -577,11 +566,7 @@ const handleSearchInput = () => {
     clearTimeout(searchInputTimer.value)
   }
   searchInputTimer.value = setTimeout(() => {
-    if (searchKeyword.value.trim()) {
-      handleSearch()
-    } else {
-      searchResults.value = []
-    }
+    handleSearch()
   }, 300)
 }
 
@@ -644,12 +629,12 @@ const handleFavour = async (post: API.PostVO) => {
 // 分享处理
 const handleShare = (post: API.PostVO) => {
   const shareUrl = `${window.location.origin}/post/${post.id}`
-  const shareText = post.title || post.content?.substring(0, 50) + '...' || '分享帖子'
+  const shareText = post.title || post.plainTextDescription?.substring(0, 50) + '...' || '分享帖子'
 
   if (navigator.share) {
     navigator.share({
       title: shareText,
-      text: post.content?.substring(0, 100) + '...' || '',
+      text: post.plainTextDescription?.substring(0, 100) + '...' || '',
       url: shareUrl
     }).catch(() => {
       // 如果分享失败，复制链接

@@ -4,7 +4,7 @@
       <a-list-item>
         <a-list-item-meta :title="item.title">
           <template #description>
-            <p>{{ item.content }}</p>
+            <p>{{ item.plainTextDescription || item.content }}</p>
           </template>
         </a-list-item-meta>
       </a-list-item>

@@ -30,6 +30,11 @@ public class PostVO {
     private String content;
 
     /**
+     * 纯文本摘要（列表页展示用，由正文 Markdown 剥离并截断得到）
+     */
+    private String plainTextDescription;
+
+    /**
      * 标签列表
      */
     private List<String> tags;

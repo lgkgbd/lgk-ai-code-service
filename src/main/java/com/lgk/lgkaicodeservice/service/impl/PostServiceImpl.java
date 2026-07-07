@@ -21,6 +21,7 @@ import com.lgk.lgkaicodeservice.model.vo.CommentVO;
 import com.lgk.lgkaicodeservice.model.vo.UserVO;
 import com.lgk.lgkaicodeservice.service.ThumbService;
 import com.lgk.lgkaicodeservice.service.UserService;
+import com.lgk.lgkaicodeservice.utils.PostContentUtils;
 import com.lgk.lgkaicodeservice.utils.RedisKeyUtil;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -541,6 +542,13 @@ public class PostServiceImpl extends ServiceImpl<PostMapper, Post> implements Po
             postVO.setHasThumb(postIdHasThumbMap.getOrDefault(post.getId(), false));
             postVO.setHasFavour(postIdHasFavourMap.getOrDefault(post.getId(), false));
             postVO.setTopComment(postIdTopCommentMap.get(post.getId()));
+            // 列表页处理正文：生成纯文本摘要 + 从正文提取首图作为封面（封面为空时），并去掉完整正文减小响应体
+            postVO.setPlainTextDescription(
+                    PostContentUtils.toPlainTextPreview(post.getContent(), PostContentUtils.DEFAULT_PREVIEW_LENGTH));
+            if (!StringUtils.hasText(postVO.getCoverImage())) {
+                postVO.setCoverImage(PostContentUtils.extractFirstImageUrl(post.getContent()));
+            }
+            postVO.setContent(null);
 
             return postVO;
         }).collect(Collectors.toList());
