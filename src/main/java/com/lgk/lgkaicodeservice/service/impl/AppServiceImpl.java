@@ -11,6 +11,8 @@ import com.lgk.lgkaicodeservice.ai.model.enums.CodeGenTypeEnum;
 import com.lgk.lgkaicodeservice.code.AiCodeGeneratorFacade;
 import com.lgk.lgkaicodeservice.code.builder.VueProjectBuilder;
 import com.lgk.lgkaicodeservice.code.handler.StreamHandlerExecutor;
+import com.lgk.lgkaicodeservice.code.template.CodeTemplateService;
+import com.lgk.lgkaicodeservice.code.template.PromptTemplateEnum;
 import com.lgk.lgkaicodeservice.constant.AppConstant;
 import com.lgk.lgkaicodeservice.exception.BusinessException;
 import com.lgk.lgkaicodeservice.exception.ErrorCode;
@@ -73,6 +75,9 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
 
     @Resource
     private AiCodeGenTypeRoutingServiceFactory aiCodeGenTypeRoutingServiceFactory;
+
+    @Resource
+    private CodeTemplateService codeTemplateService;
 
     @Value("${code.deploy-host:http://localhost}")
     private String deployHost;
@@ -179,9 +184,18 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App>  implements AppS
         String initPrompt = appAddRequest.getInitPrompt();
         ThrowUtils.throwIf(StrUtil.isBlank(initPrompt), ErrorCode.PARAMS_ERROR, "初始化 prompt 不能为空");
 
-        // 使用 AI 智能选择代码生成类型（多例模式）
-        AiCodeGenTypeRoutingService routingService = aiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
-        CodeGenTypeEnum selectedCodeGenType = routingService.routeCodeGenType(initPrompt);
+        // 优先命中预生成模板：固定提示词直接使用模板的类型，跳过路由 LLM 调用
+        CodeGenTypeEnum selectedCodeGenType;
+        PromptTemplateEnum matchedTemplate = codeTemplateService.match(initPrompt);
+        if (matchedTemplate != null) {
+            selectedCodeGenType = matchedTemplate.getCodeGenType();
+            log.info("提示词命中模板 [{}]，跳过类型路由 LLM，直接使用类型: {}",
+                    matchedTemplate.getKey(), selectedCodeGenType.getValue());
+        } else {
+            // 使用 AI 智能选择代码生成类型（多例模式）
+            AiCodeGenTypeRoutingService routingService = aiCodeGenTypeRoutingServiceFactory.createAiCodeGenTypeRoutingService();
+            selectedCodeGenType = routingService.routeCodeGenType(initPrompt);
+        }
 
         // 构造入库对象
         App app = new App();

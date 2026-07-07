@@ -27,4 +27,10 @@ public interface AppConstant {
      */
     String CODE_DEPLOY_HOST = "http://localhost";
 
+    /**
+     * 预生成代码模板根目录
+     * 固定提示词命中模板时，直接复用此目录下的产物，跳过 LLM 调用以节省成本
+     */
+    String CODE_TEMPLATE_ROOT_DIR = System.getProperty("user.dir") + "/templates";
+
 }

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>温柔的时钟</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(-45deg, #ffd3e0, #d4c4fb, #c4e0fb, #d3f4e5);
+    background-size: 400% 400%;
+    animation: flow 18s ease infinite;
+    color: #5b5470;
+  }
+  @keyframes flow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .clock {
+    padding: 48px 60px; border-radius: 32px; text-align: center;
+    background: rgba(255, 255, 255, 0.45);
+    box-shadow: 0 20px 60px rgba(150, 130, 200, 0.25);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+  }
+  .time {
+    font-size: 72px; font-weight: 300; letter-spacing: 4px;
+    display: flex; align-items: baseline; justify-content: center; gap: 4px;
+  }
+  .time .sep { animation: blink 2s ease-in-out infinite; }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+  .time .sec {
+    font-size: 28px; font-weight: 400; color: #a094c0;
+    transition: transform 0.4s ease;
+  }
+  .date { margin-top: 14px; font-size: 18px; opacity: 0.8; letter-spacing: 2px; }
+  .greet { margin-top: 6px; font-size: 14px; opacity: 0.6; }
+</style>
+</head>
+<body>
+  <div class="clock">
+    <div class="time">
+      <span id="hh">00</span><span class="sep">:</span><span id="mm">00</span>
+      <span class="sec" id="ss">00</span>
+    </div>
+    <div class="date" id="date">—</div>
+    <div class="greet" id="greet">愿你拥有温柔的一天</div>
+  </div>
+
+<script>
+  const hh = document.getElementById('hh');
+  const mm = document.getElementById('mm');
+  const ss = document.getElementById('ss');
+  const dateEl = document.getElementById('date');
+  const greetEl = document.getElementById('greet');
+  const week = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  const pad = n => String(n).padStart(2, '0');
+
+  function greeting(h) {
+    if (h < 6) return '夜深了，早点休息';
+    if (h < 11) return '早安，愿你拥有温柔的一天';
+    if (h < 14) return '午安，记得好好吃饭';
+    if (h < 18) return '午后时光，慢慢来';
+    if (h < 23) return '晚上好，放松一下吧';
+    return '夜深了，早点休息';
+  }
+
+  function update() {
+    const now = new Date();
+    hh.textContent = pad(now.getHours());
+    mm.textContent = pad(now.getMinutes());
+    ss.textContent = pad(now.getSeconds());
+    // 秒数轻微跳动，柔和过渡
+    ss.style.transform = 'translateY(-2px)';
+    setTimeout(() => { ss.style.transform = 'translateY(0)'; }, 200);
+    dateEl.textContent = now.getFullYear() + '年' + (now.getMonth() + 1) + '月' +
+      now.getDate() + '日 · ' + week[now.getDay()];
+    greetEl.textContent = greeting(now.getHours());
+  }
+
+  update();
+  setInterval(update, 1000);
+</script>
+</body>
+</html>

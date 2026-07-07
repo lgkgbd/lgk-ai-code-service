@@ -41,6 +41,9 @@ public class AiCodeGeneratorFacade {
     @Resource
     private VueProjectBuilder vueProjectBuilder;
 
+    @Resource
+    private com.lgk.lgkaicodeservice.code.template.CodeTemplateService codeTemplateService;
+
     /**
      * 统一入口：根据类型生成并保存代码（使用 appId）
      *
@@ -82,6 +85,12 @@ public class AiCodeGeneratorFacade {
     public Flux<String> generateAndSaveCodeStream(String userMessage, CodeGenTypeEnum codeGenTypeEnum, Long appId) {
         if (codeGenTypeEnum == null) {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "生成类型为空");
+        }
+
+        // 命中预生成模板则直接复用产物，跳过 LLM 调用以节省成本
+        Flux<String> templateStream = codeTemplateService.tryServeFromTemplate(userMessage, appId);
+        if (templateStream != null) {
+            return templateStream;
         }
 
         // 根据 appId 获取对应的 AI 服务实例

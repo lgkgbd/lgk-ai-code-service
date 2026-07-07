@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>登录</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+    overflow: hidden; position: relative;
+  }
+  /* 背景柔和光斑 */
+  .blob { position: absolute; border-radius: 50%; filter: blur(60px); opacity: 0.55; }
+  .blob.a { width: 340px; height: 340px; background: #ff6ec4; top: -80px; left: -60px; }
+  .blob.b { width: 300px; height: 300px; background: #7873f5; bottom: -70px; right: -50px; }
+  .blob.c { width: 220px; height: 220px; background: #42e695; top: 40%; left: 55%; }
+
+  .card {
+    position: relative; width: 360px; padding: 40px 34px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 22px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(18px);
+    color: #fff;
+  }
+  .card h1 { font-size: 26px; font-weight: 600; text-align: center; margin-bottom: 6px; }
+  .card .sub { text-align: center; font-size: 13px; opacity: 0.8; margin-bottom: 28px; }
+
+  .field { position: relative; margin-bottom: 18px; }
+  .field input {
+    width: 100%; padding: 13px 16px; font-size: 14px; color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 12px; outline: none; transition: border 0.2s, background 0.2s;
+  }
+  .field input::placeholder { color: rgba(255, 255, 255, 0.7); }
+  .field input:focus { border-color: #fff; background: rgba(255, 255, 255, 0.18); }
+
+  .row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; margin-bottom: 22px; }
+  .row label { display: flex; align-items: center; gap: 6px; cursor: pointer; opacity: 0.9; }
+  .row a { color: #fff; opacity: 0.9; text-decoration: none; }
+  .row a:hover { text-decoration: underline; }
+
+  .btn {
+    width: 100%; padding: 13px; font-size: 15px; font-weight: 600; cursor: pointer;
+    color: #2575fc; background: #fff; border: none; border-radius: 12px;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25); }
+
+  .divider { display: flex; align-items: center; gap: 12px; margin: 24px 0 18px; font-size: 12px; opacity: 0.75; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255, 255, 255, 0.35); }
+
+  .socials { display: flex; justify-content: center; gap: 16px; }
+  .socials button {
+    width: 46px; height: 46px; border-radius: 50%; cursor: pointer; font-size: 18px;
+    background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.3);
+    color: #fff; transition: background 0.2s, transform 0.15s;
+  }
+  .socials button:hover { background: rgba(255, 255, 255, 0.28); transform: translateY(-2px); }
+</style>
+</head>
+<body>
+  <div class="blob a"></div>
+  <div class="blob b"></div>
+  <div class="blob c"></div>
+
+  <form class="card" onsubmit="return onLogin(event)">
+    <h1>欢迎回来</h1>
+    <p class="sub">登录以继续你的旅程</p>
+
+    <div class="field">
+      <input type="text" id="account" placeholder="账号 / 邮箱" autocomplete="username" required>
+    </div>
+    <div class="field">
+      <input type="password" id="password" placeholder="密码" autocomplete="current-password" required>
+    </div>
+
+    <div class="row">
+      <label><input type="checkbox" id="remember"> 记住我</label>
+      <a href="#">忘记密码？</a>
+    </div>
+
+    <button class="btn" type="submit">登 录</button>
+
+    <div class="divider">或使用以下方式登录</div>
+    <div class="socials">
+      <button type="button" title="微信">💬</button>
+      <button type="button" title="GitHub">🐙</button>
+      <button type="button" title="Google">🔍</button>
+    </div>
+  </form>
+
+<script>
+  function onLogin(e) {
+    e.preventDefault();
+    const account = document.getElementById('account').value.trim();
+    const remember = document.getElementById('remember').checked;
+    alert('登录中…\n账号：' + account + '\n记住我：' + (remember ? '是' : '否'));
+    return false;
+  }
+</script>
+</body>
+</html>
