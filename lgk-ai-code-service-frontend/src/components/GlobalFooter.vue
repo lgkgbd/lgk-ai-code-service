@@ -16,6 +16,16 @@
       <div class="footer-version">
         <span class="version-text">v1.0.0</span>
       </div>
+      <div class="footer-beian">
+        <a
+          href="https://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="beian-link"
+        >
+          粤ICP备2025471078号
+        </a>
+      </div>
     </div>
   </a-layout-footer>
 </template>
@@ -37,8 +47,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px;
   text-align: center;
 }
 
@@ -85,6 +96,23 @@
   padding: 4px 8px;
   border-radius: 4px;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.footer-beian {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.beian-link {
+  font-size: 12px;
+  color: #999;
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.beian-link:hover {
+  color: #1890ff;
 }
 
 /* 响应式设计 */
