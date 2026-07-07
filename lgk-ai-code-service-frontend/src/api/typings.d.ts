@@ -226,6 +226,7 @@ declare namespace API {
     replyNum?: number
     hasThumb?: boolean
     createTime?: string
+    replies?: CommentVO[]
   }
 
   type createBucketParams = {

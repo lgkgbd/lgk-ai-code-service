@@ -17,6 +17,7 @@ import com.lgk.lgkaicodeservice.model.enums.ThumbTypeEnum;
 import com.lgk.lgkaicodeservice.model.enums.UserRoleEnum;
 import com.lgk.lgkaicodeservice.model.vo.CommentVO;
 import com.lgk.lgkaicodeservice.service.CommentService;
+import com.lgk.lgkaicodeservice.service.RedisLuaScriptService;
 import com.lgk.lgkaicodeservice.service.UserService;
 import com.lgk.lgkaicodeservice.service.comment.CommentHandler;
 import com.lgk.lgkaicodeservice.service.comment.CommentHandlerFactory;
@@ -26,6 +27,7 @@ import com.mybatisflex.core.update.UpdateChain;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -36,6 +38,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> implements CommentService {
 
@@ -52,6 +55,9 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
     @Resource
     private CommentHandlerFactory commentHandlerFactory;
+
+    @Resource
+    private RedisLuaScriptService redisLuaScriptService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -121,6 +127,14 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
 
         handler.incrementCommentNum(targetId);
 
+        // 同步到 Redis 存在性 Set，供评论点赞功能校验目标是否存在
+        try {
+            redisLuaScriptService.addToExistsSet(ThumbTypeEnum.COMMENT, comment.getId());
+        } catch (Exception e) {
+            log.error("同步评论到 Redis 失败: commentId={}", comment.getId(), e);
+            // 不影响主流程，记录日志即可
+        }
+
         return comment.getId();
     }
 
@@ -151,6 +165,13 @@ public class CommentServiceImpl extends ServiceImpl<CommentMapper, Comment> impl
         CommentTargetTypeEnum targetType = CommentTargetTypeEnum.getEnumByValue(comment.getTargetType());
         if (targetType != null) {
             commentHandlerFactory.getHandler(targetType).decrementCommentNum(comment.getTargetId());
+        }
+
+        // 同步清理 Redis 存在性 Set
+        try {
+            redisLuaScriptService.removeFromExistsSet(ThumbTypeEnum.COMMENT, commentId);
+        } catch (Exception e) {
+            log.warn("删除评论后清理 Redis 失败: commentId={}", commentId, e);
         }
 
         return true;

@@ -48,33 +48,7 @@
         </div>
 
         <!-- Comments Section -->
-        <div id="comments-section" class="comments-section-wrapper">
-          <div class="comments-header">
-            <h3>评论</h3>
-            <div class="comment-sort">
-              <a-button type="text" class="active">最热</a-button>
-              <a-button type="text">最新</a-button>
-            </div>
-          </div>
-          <div class="comment-input-section">
-            <a-avatar :src="post.user?.userAvatar" :size="40" />
-            <a-textarea
-              v-model:value="commentContent"
-              placeholder="写下你的评论..."
-              :rows="1"
-              auto-size
-              class="comment-textarea"
-            />
-            <a-button type="primary" @click="handleComment" :disabled="!commentContent.trim()">
-              发布
-            </a-button>
-          </div>
-          <div class="comments-list">
-            <div class="no-comments">
-              <p>暂无评论，快来抢沙发吧！</p>
-            </div>
-          </div>
-        </div>
+        <CommentSection :target-type="0" :target-id="post.id" />
       </div>
 
       <div class="post-sidebar">
@@ -121,9 +95,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { getPostVoById } from '@/api/postController'
 import { doThumb } from '@/api/thumbController'
 import { doPostFavour } from '@/api/postFavourController'
-import { showError, showSuccess, showWarning } from '@/utils/message'
+import { showError, showSuccess } from '@/utils/message'
 import { marked } from 'marked'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
+import CommentSection from '@/components/comment/CommentSection.vue'
 
 const loginUserStore = useLoginUserStore()
 const route = useRoute()
@@ -132,7 +107,6 @@ const router = useRouter()
 // 数据状态
 const post = ref<API.PostVO | null>(null)
 const isLoading = ref(true)
-const commentContent = ref('')
 
 // 获取帖子详情
 const fetchPostDetail = async () => {
@@ -317,18 +291,6 @@ const scrollToComments = () => {
   }
 }
 
-// 评论处理
-const handleComment = () => {
-  if (!commentContent.value.trim()) {
-    showWarning('请输入评论内容')
-    return
-  }
-
-  // TODO: 实现评论功能
-  showSuccess('评论功能开发中...')
-  commentContent.value = ''
-}
-
 onMounted(() => {
   fetchPostDetail()
 })
@@ -474,44 +436,6 @@ onMounted(() => {
 }
 
 
-.comments-section-wrapper {
-  background: white;
-  padding: 24px;
-  border-radius: 8px;
-}
-.comments-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-.comments-header h3 {
-  font-size: 18px;
-  font-weight: 600;
-}
-.comment-sort .ant-btn {
-  color: #666;
-}
-.comment-sort .ant-btn.active {
-  color: #1890ff;
-}
-
-.comment-input-section {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-.comment-textarea {
-  flex: 1;
-}
-
-.no-comments {
-  text-align: center;
-  padding: 40px 20px;
-  color: #999;
-}
-
 .post-sidebar {
   width: 300px;
   flex-shrink: 0;
@@ -590,7 +514,7 @@ onMounted(() => {
     flex-direction: column;
     gap: 0;
   }
-  .post-card, .comments-section-wrapper {
+  .post-card {
     margin-bottom: 12px;
     border-radius: 0;
   }
