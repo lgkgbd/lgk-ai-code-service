@@ -19,16 +19,24 @@ const hideHeaderSearch = computed(() => !!route.meta.hideHeaderSearch || !search
 type MenuItem = {
   key: string
   label: string
-  path: string
+  path?: string
   access?: string
+  children?: MenuItem[]
 }
 
 const menuItems = reactive<MenuItem[]>([
   { key: 'home', label: '首页', path: '/', access: ACCESS_ENUM.NOT_LOGIN },
   { key: 'community', label: '交流', path: '/community', access: ACCESS_ENUM.NOT_LOGIN },
-  { key: 'postManage', label: '帖子', path: '/admin/postManage', access: ACCESS_ENUM.ADMIN },
-  { key: 'userManage', label: '用户', path: '/admin/userManage', access: ACCESS_ENUM.ADMIN },
-  { key: 'appManage', label: '应用', path: '/admin/appManage', access: ACCESS_ENUM.ADMIN },
+  {
+    key: 'manage',
+    label: '管理',
+    access: ACCESS_ENUM.ADMIN,
+    children: [
+      { key: 'postManage', label: '帖子', path: '/admin/postManage', access: ACCESS_ENUM.ADMIN },
+      { key: 'userManage', label: '用户', path: '/admin/userManage', access: ACCESS_ENUM.ADMIN },
+      { key: 'appManage', label: '应用', path: '/admin/appManage', access: ACCESS_ENUM.ADMIN },
+    ],
+  },
   { key: 'about', label: '关于', path: '/about', access: ACCESS_ENUM.NOT_LOGIN },
 ])
 </script>

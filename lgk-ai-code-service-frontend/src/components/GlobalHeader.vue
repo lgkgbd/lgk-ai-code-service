@@ -8,15 +8,39 @@
 
       <div class="center">
         <div class="custom-menu">
-          <a
-            v-for="item in filteredMenuItems"
-            :key="item.key"
-            :href="'#'"
-            @click.prevent="onMenuItemClick(item.path)"
-            :class="['menu-link', { 'active': isMenuItemActive(item) }]"
-          >
-            <span class="menu-text">{{ item.label }}</span>
-          </a>
+          <template v-for="item in filteredMenuItems" :key="item.key">
+            <!-- 带子菜单的项，鼠标悬浮展开下拉 -->
+            <a-dropdown v-if="item.children?.length" overlayClassName="nav-dropdown-overlay">
+              <a
+                :href="'#'"
+                @click.prevent
+                :class="['menu-link', { active: isMenuItemActive(item) }]"
+              >
+                <span class="menu-text">{{ item.label }}</span>
+                <DownOutlined class="menu-arrow" />
+              </a>
+              <template #overlay>
+                <a-menu>
+                  <a-menu-item
+                    v-for="child in item.children"
+                    :key="child.key"
+                    @click="onMenuItemClick(child.path)"
+                  >
+                    {{ child.label }}
+                  </a-menu-item>
+                </a-menu>
+              </template>
+            </a-dropdown>
+
+            <a
+              v-else
+              :href="'#'"
+              @click.prevent="onMenuItemClick(item.path)"
+              :class="['menu-link', { active: isMenuItemActive(item) }]"
+            >
+              <span class="menu-text">{{ item.label }}</span>
+            </a>
+          </template>
         </div>
       </div>
       <a-input-search
@@ -72,15 +96,28 @@
       class="mobile-nav-drawer"
       :body-style="{ padding: '8px 0' }"
     >
-      <a
-        v-for="item in filteredMenuItems"
-        :key="item.key"
-        class="mobile-nav-link"
-        :class="{ active: isMenuItemActive(item) }"
-        @click="onMobileMenuClick(item.path)"
-      >
-        {{ item.label }}
-      </a>
+      <template v-for="item in filteredMenuItems" :key="item.key">
+        <template v-if="item.children?.length">
+          <div class="mobile-nav-group-title">{{ item.label }}</div>
+          <a
+            v-for="child in item.children"
+            :key="child.key"
+            class="mobile-nav-link mobile-nav-sub-link"
+            :class="{ active: isMenuItemActive(child) }"
+            @click="onMobileMenuClick(child.path)"
+          >
+            {{ child.label }}
+          </a>
+        </template>
+        <a
+          v-else
+          class="mobile-nav-link"
+          :class="{ active: isMenuItemActive(item) }"
+          @click="onMobileMenuClick(item.path)"
+        >
+          {{ item.label }}
+        </a>
+      </template>
     </a-drawer>
   </a-layout-header>
 </template>
@@ -90,7 +127,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { useSearchStore } from '@/stores/searchStore.ts'
-import { LogoutOutlined, UserOutlined, MenuOutlined } from '@ant-design/icons-vue'
+import { LogoutOutlined, UserOutlined, MenuOutlined, DownOutlined } from '@ant-design/icons-vue'
 import { userLogout } from '@/api/userController.ts'
 import { message } from 'ant-design-vue'
 import checkAccess from '@/access/checkAccess.ts'
@@ -98,8 +135,9 @@ import checkAccess from '@/access/checkAccess.ts'
 type MenuItem = {
   key: string
   label: string
-  path: string
+  path?: string
   access?: string
+  children?: MenuItem[]
 }
 
 const props = defineProps<{
@@ -116,7 +154,7 @@ const router = useRouter()
 const drawerOpen = ref(false)
 
 // 移动端菜单点击：跳转并关闭抽屉
-function onMobileMenuClick(path: string) {
+function onMobileMenuClick(path?: string) {
   onMenuItemClick(path)
   drawerOpen.value = false
 }
@@ -135,15 +173,23 @@ const goProfile = () => {
   router.push('/user/profile')
 }
 
-// 过滤有权限的菜单项
+// 过滤有权限的菜单项（含子菜单），子项全部无权限时父项也不展示
 const filteredMenuItems = computed(() => {
-  return props.menuItems.filter(item => {
-    return checkAccess(loginUserStore.loginUser, item.access);
-  });
-});
+  const filter = (items: MenuItem[]): MenuItem[] =>
+    items
+      .filter((item) => checkAccess(loginUserStore.loginUser, item.access))
+      .map((item) => (item.children ? { ...item, children: filter(item.children) } : item))
+      .filter((item) => !item.children || item.children.length > 0)
 
-// 检查菜单项是否激活
-const isMenuItemActive = (item: MenuItem) => {
+  return filter(props.menuItems)
+})
+
+// 检查菜单项是否激活（父项在任一子项激活时也激活）
+const isMenuItemActive = (item: MenuItem): boolean => {
+  if (item.children?.length) {
+    return item.children.some((child) => isMenuItemActive(child))
+  }
+  if (!item.path) return false
   // 1) 精确匹配优先
   if (item.path === route.path) return true
   // 2) 最长前缀匹配（避免 '/' 抢占所有路径）
@@ -186,7 +232,7 @@ const doLogout = async () => {
   }
 }
 
-function onMenuItemClick(path: string) {
+function onMenuItemClick(path?: string) {
   if (path && path !== route.path) {
     router.push(path)
   }
@@ -283,6 +329,16 @@ const onSearch = (value: string) => {
 .menu-text {
   font-weight: 500;
   font-size: 14px;
+}
+
+.menu-arrow {
+  font-size: 10px;
+  margin-left: 6px;
+  transition: transform 0.3s ease;
+}
+
+.ant-dropdown-open .menu-arrow {
+  transform: rotate(180deg);
 }
 
 .right {
@@ -462,6 +518,19 @@ const onSearch = (value: string) => {
 .mobile-nav-drawer .mobile-nav-link:hover {
   background: #f5f5f5;
   color: #1890ff;
+}
+
+.mobile-nav-drawer .mobile-nav-group-title {
+  padding: 14px 24px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #999;
+  letter-spacing: 1px;
+}
+
+.mobile-nav-drawer .mobile-nav-sub-link {
+  padding-left: 40px;
+  font-size: 15px;
 }
 
 .mobile-nav-drawer .mobile-nav-link.active {
