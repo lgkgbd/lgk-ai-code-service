@@ -27,6 +27,7 @@ type MenuItem = {
 const menuItems = reactive<MenuItem[]>([
   { key: 'home', label: '首页', path: '/', access: ACCESS_ENUM.NOT_LOGIN },
   { key: 'community', label: '交流', path: '/community', access: ACCESS_ENUM.NOT_LOGIN },
+  { key: 'word', label: '单词', path: '/word', access: ACCESS_ENUM.USER },
   {
     key: 'manage',
     label: '管理',

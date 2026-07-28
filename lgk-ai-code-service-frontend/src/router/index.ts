@@ -14,6 +14,10 @@ import AboutPage from '@/pages/AboutPage.vue'
 import PostDetailPage from '@/pages/PostDetailPage.vue'
 import WritePostPage from '@/pages/WritePostPage.vue'
 import SearchPage from '@/pages/SearchPage.vue'
+import WordHomePage from '@/pages/word/WordHomePage.vue'
+import WordListPage from '@/pages/word/WordListPage.vue'
+import WordReviewPage from '@/pages/word/WordReviewPage.vue'
+import WordDetailPage from '@/pages/word/WordDetailPage.vue'
 import ACCESS_ENUM from '@/access/accessEnum.ts'
 import { useLoginUserStore } from '@/stores/loginUser'
 import checkAccess from '@/access/checkAccess'
@@ -146,6 +150,38 @@ const router = createRouter({
         hideHeaderSearch: true,
       },
     },
+    {
+      path: '/word',
+      name: '单词',
+      component: WordHomePage,
+      meta: {
+        access: ACCESS_ENUM.USER,
+      },
+    },
+    {
+      path: '/word/list',
+      name: '我的词库',
+      component: WordListPage,
+      meta: {
+        access: ACCESS_ENUM.USER,
+      },
+    },
+    {
+      path: '/word/review',
+      name: '单词复习',
+      component: WordReviewPage,
+      meta: {
+        access: ACCESS_ENUM.USER,
+      },
+    },
+    {
+      path: '/word/detail/:id',
+      name: '词卡详情',
+      component: WordDetailPage,
+      meta: {
+        access: ACCESS_ENUM.USER,
+      },
+    },
   ],
 })
 
@@ -163,9 +199,9 @@ router.beforeEach(async (to, from, next) => {
   const hasAccess = checkAccess(loginUserStore.loginUser, needAccess)
 
   if (!hasAccess) {
-    // 无权限，跳转到登录页
+    // 无权限，跳转到登录页，并带上原目标地址，登录后可跳回
     if (needAccess !== ACCESS_ENUM.NOT_LOGIN) {
-      next('/user/login')
+      next({ path: '/user/login', query: { redirect: to.fullPath } })
       return
     }
   }

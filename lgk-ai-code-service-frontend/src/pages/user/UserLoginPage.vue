@@ -30,7 +30,7 @@
 
 import { message } from 'ant-design-vue'
 import { reactive } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useLoginUserStore } from '@/stores/loginUser.ts'
 import { userLogin } from '@/api/userController.ts'
 
@@ -40,7 +40,17 @@ const formState = reactive<API.UserLoginRequest>({
 })
 
 const router = useRouter()
+const route = useRoute()
 const loginUserStore = useLoginUserStore()
+
+// 仅允许跳回站内路径，避免开放重定向
+function safeRedirect(): string {
+  const r = route.query.redirect
+  if (typeof r === 'string' && r.startsWith('/') && !r.startsWith('//')) {
+    return r
+  }
+  return '/'
+}
 
 /**
  * 提交表单
@@ -60,7 +70,7 @@ const handleSubmit = async (values: any) => {
       },
     })
     router.push({
-      path: '/',
+      path: safeRedirect(),
       replace: true,
     })
   } else {

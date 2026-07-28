@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>单词记忆功能 · 前端原型</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #1890ff;
+    --primary-bg: #e6f7ff;
+    --text: #262626;
+    --text-2: #595959;
+    --text-3: #8c8c8c;
+    --border: #f0f0f0;
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+    --success: #52c41a;
+    --warning: #faad14;
+    --danger: #ff4d4f;
+    --purple: #722ed1;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    color: var(--text);
+    background: #eef1f5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============ 原型导航（非产品的一部分） ============ */
+  .proto-bar {
+    position: sticky; top: 0; z-index: 100;
+    background: #1f1f1f; color: #fff;
+    padding: 10px 20px; display: flex; align-items: center;
+    gap: 8px; flex-wrap: wrap;
+  }
+  .proto-bar .label { font-size: 12px; color: #8c8c8c; margin-right: 8px; letter-spacing: 1px; }
+  .proto-tab {
+    background: #2f2f2f; border: 1px solid #3a3a3a; color: #d9d9d9;
+    padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    transition: all .2s;
+  }
+  .proto-tab:hover { background: #3a3a3a; color: #fff; }
+  .proto-tab.on { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .proto-note {
+    max-width: 1200px; margin: 16px auto 0; padding: 0 24px;
+    font-size: 13px; color: var(--text-3);
+  }
+
+  /* ============ 站点框架（复刻现有 GlobalHeader） ============ */
+  .app { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); min-height: 100vh; }
+  .header {
+    background: #fff; border-bottom: 1px solid var(--border);
+    box-shadow: var(--card-shadow); padding: 0 24px;
+  }
+  .header-inner {
+    max-width: 1200px; margin: 0 auto; height: 64px;
+    display: flex; align-items: center; gap: 24px;
+  }
+  .logo-box { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .logo {
+    width: 32px; height: 32px; border-radius: 6px; background: #ffd666;
+    display: grid; place-items: center; font-size: 18px;
+  }
+  .site-title { font-weight: 600; font-size: 18px; color: var(--primary); white-space: nowrap; }
+  .nav { flex: 1; display: flex; justify-content: center; }
+  .nav a {
+    display: inline-flex; align-items: center; height: 64px; padding: 0 16px;
+    margin: 0 2px; border-radius: 6px; color: #333; text-decoration: none;
+    font-size: 14px; font-weight: 500; position: relative;
+  }
+  .nav a.on { background: var(--primary-bg); color: var(--primary); border-bottom: 2px solid var(--primary); }
+  .nav .badge {
+    background: var(--danger); color: #fff; font-size: 11px; line-height: 1;
+    padding: 3px 6px; border-radius: 10px; margin-left: 6px; font-weight: 600;
+  }
+  .fake-search {
+    width: 200px; height: 32px; border: 1px solid #d9d9d9; border-radius: 6px;
+    display: flex; align-items: center; padding: 0 10px; color: #bfbfbf;
+    font-size: 14px; background: #fff;
+  }
+  .avatar-box { display: flex; align-items: center; gap: 8px; }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--primary);
+    color: #fff; display: grid; place-items: center; font-size: 14px; font-weight: 600;
+  }
+  .uname { font-size: 14px; font-weight: 500; }
+
+  .page { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .screen { display: none; }
+  .screen.on { display: block; }
+
+  /* ============ 通用卡片 ============ */
+  .card {
+    background: #fff; border-radius: 8px; box-shadow: var(--card-shadow);
+    padding: 20px; margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 15px; font-weight: 600; margin-bottom: 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title .more { font-size: 13px; color: var(--primary); font-weight: 400; cursor: pointer; }
+  .btn {
+    border: none; border-radius: 6px; padding: 0 20px; height: 36px;
+    font-size: 14px; font-weight: 500; cursor: pointer; transition: all .2s;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: #40a9ff; }
+  .btn-ghost { background: #fff; color: var(--text-2); border: 1px solid #d9d9d9; }
+  .btn-ghost:hover { color: var(--primary); border-color: var(--primary); }
+  .btn-lg { height: 44px; padding: 0 32px; font-size: 15px; border-radius: 8px; }
+
+  .tag {
+    display: inline-block; font-size: 12px; line-height: 1;
+    padding: 4px 8px; border-radius: 4px; font-weight: 500;
+  }
+  .tag-new    { background: #f9f0ff; color: var(--purple); }
+  .tag-learn  { background: #fff7e6; color: #d46b08; }
+  .tag-review { background: var(--primary-bg); color: var(--primary); }
+  .tag-done   { background: #f6ffed; color: var(--success); }
+  .tag-exam   { background: #fff1f0; color: var(--danger); }
+  .tag-plain  { background: #fafafa; color: var(--text-3); border: 1px solid var(--border); }
+
+  /* ============ 屏 1：工作台 ============ */
+  .capture {
+    background: #fff; border-radius: 12px; box-shadow: 0 4px 20px rgba(24, 144, 255, .10);
+    border: 2px solid var(--primary); padding: 22px 24px; margin-bottom: 16px;
+  }
+  .capture-input {
+    width: 100%; border: none; outline: none; font-size: 20px;
+    font-family: inherit; color: var(--text);
+  }
+  .capture-input::placeholder { color: #bfbfbf; font-size: 18px; }
+  .capture-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 16px; padding-top: 14px; border-top: 1px dashed var(--border);
+    flex-wrap: wrap; gap: 10px;
+  }
+  .hints { display: flex; gap: 8px; flex-wrap: wrap; }
+  .hint {
+    font-size: 12px; color: var(--text-3); background: #fafafa;
+    padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border);
+  }
+  .hint kbd {
+    background: #fff; border: 1px solid #d9d9d9; border-bottom-width: 2px;
+    border-radius: 3px; padding: 1px 5px; font-size: 11px; font-family: inherit;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1.1fr 1fr; gap: 16px; }
+
+  .review-cta {
+    background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+    color: #fff; border-radius: 8px; padding: 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 16px rgba(24, 144, 255, .28);
+  }
+  .review-cta .num { font-size: 42px; font-weight: 700; line-height: 1; }
+  .review-cta .lbl { font-size: 14px; opacity: .9; margin-top: 8px; }
+  .review-cta .sub { font-size: 12px; opacity: .7; margin-top: 4px; }
+  .review-cta .btn { background: #fff; color: var(--primary); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .stat {
+    background: #fff; border-radius: 8px; box-shadow: var(--card-shadow);
+    padding: 16px; text-align: center;
+  }
+  .stat .n { font-size: 24px; font-weight: 700; color: var(--text); }
+  .stat .t { font-size: 12px; color: var(--text-3); margin-top: 6px; }
+
+  /* 词卡 */
+  .wcard {
+    border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px;
+    margin-bottom: 10px; transition: all .2s; cursor: pointer; background: #fff;
+  }
+  .wcard:hover { border-color: var(--primary); box-shadow: 0 2px 12px rgba(24, 144, 255, .12); }
+  .wcard-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .wcard-word { font-size: 18px; font-weight: 600; }
+  .wcard-ph { font-size: 13px; color: var(--text-3); font-family: "Times New Roman", serif; }
+  .wcard-spk { color: var(--primary); cursor: pointer; font-size: 14px; }
+  .wcard-tr { font-size: 14px; color: var(--text-2); margin-top: 6px; line-height: 1.6; }
+  .wcard-meta {
+    display: flex; align-items: center; gap: 10px; margin-top: 10px;
+    font-size: 12px; color: var(--text-3); flex-wrap: wrap;
+  }
+  .wcard-sent {
+    margin-top: 10px; padding: 8px 12px; background: #fafafa;
+    border-left: 3px solid #d9d9d9; border-radius: 0 4px 4px 0;
+    font-size: 13px; color: var(--text-2); line-height: 1.6;
+  }
+  .wcard-sent em { color: var(--primary); font-style: normal; font-weight: 600; }
+  .encounter { color: var(--warning); font-weight: 600; }
+
+  /* ============ 屏 2：我的词库 ============ */
+  .filter-bar {
+    background: #fff; border-radius: 8px; box-shadow: var(--card-shadow);
+    padding: 14px 20px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .seg { display: flex; background: #fafafa; border-radius: 6px; padding: 3px; }
+  .seg span {
+    padding: 6px 14px; font-size: 13px; border-radius: 4px;
+    cursor: pointer; color: var(--text-2);
+  }
+  .seg span.on { background: #fff; color: var(--primary); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .filter-bar .spacer { flex: 1; }
+  .mini-search {
+    height: 32px; border: 1px solid #d9d9d9; border-radius: 6px;
+    padding: 0 12px; font-size: 13px; width: 180px; outline: none; font-family: inherit;
+  }
+  .mini-select {
+    height: 32px; border: 1px solid #d9d9d9; border-radius: 6px;
+    padding: 0 8px; font-size: 13px; outline: none; background: #fff; font-family: inherit;
+  }
+
+  /* ============ 屏 3：复习 ============ */
+  .review-wrap { max-width: 720px; margin: 0 auto; }
+  .progress-row {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+    font-size: 13px; color: var(--text-2);
+  }
+  .progress { flex: 1; height: 6px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
+  .progress i { display: block; height: 100%; width: 25%; background: var(--primary); border-radius: 3px; }
+
+  .flip {
+    background: #fff; border-radius: 12px; box-shadow: 0 4px 24px rgba(0, 0, 0, .08);
+    padding: 40px 36px; text-align: center; min-height: 340px;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .flip-src { font-size: 12px; color: var(--text-3); margin-bottom: 20px; }
+  .flip-sent { font-size: 20px; line-height: 1.9; color: var(--text); }
+  .blank {
+    display: inline-block; min-width: 120px; border-bottom: 2px solid var(--primary);
+    color: var(--primary); font-weight: 700;
+  }
+  .flip-hint { margin-top: 28px; font-size: 13px; color: var(--text-3); }
+  .flip-hint kbd {
+    background: #fafafa; border: 1px solid #d9d9d9; border-bottom-width: 2px;
+    border-radius: 3px; padding: 2px 7px; font-size: 12px; font-family: inherit;
+  }
+
+  .flip-answer { border-top: 1px dashed var(--border); margin-top: 28px; padding-top: 24px; }
+  .flip-word { font-size: 34px; font-weight: 700; letter-spacing: .5px; }
+  .flip-ph { font-size: 15px; color: var(--text-3); margin-top: 8px; font-family: "Times New Roman", serif; }
+  .flip-tr { font-size: 16px; color: var(--text-2); margin-top: 16px; line-height: 1.8; }
+
+  .grades { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+  .grade {
+    border: 1px solid #d9d9d9; background: #fff; border-radius: 8px;
+    padding: 12px 8px; cursor: pointer; text-align: center; transition: all .2s;
+  }
+  .grade:hover { border-color: var(--primary); background: var(--primary-bg); }
+  .grade .g-t { font-size: 14px; font-weight: 600; }
+  .grade .g-s { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+  .grade .g-k {
+    display: inline-block; margin-top: 8px; font-size: 11px; color: var(--text-3);
+    border: 1px solid #d9d9d9; border-radius: 3px; padding: 1px 6px;
+  }
+  .g0 .g-t { color: var(--danger); }
+  .g1 .g-t { color: var(--warning); }
+  .g2 .g-t { color: var(--primary); }
+  .g3 .g-t { color: var(--success); }
+
+  /* ============ 屏 4：词卡详情 ============ */
+  .detail-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .detail-word { font-size: 40px; font-weight: 700; line-height: 1.1; }
+  .detail-ph { font-size: 16px; color: var(--text-3); margin-top: 10px; font-family: "Times New Roman", serif; }
+  .detail-tags { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .def-block { margin-top: 4px; }
+  .def-row { display: flex; gap: 12px; padding: 8px 0; font-size: 15px; line-height: 1.7; }
+  .def-pos {
+    flex-shrink: 0; color: var(--purple); font-style: italic;
+    font-family: "Times New Roman", serif; min-width: 36px;
+  }
+  .def-en { color: var(--text-3); font-size: 13px; margin-top: 10px; line-height: 1.7; }
+
+  .timeline { position: relative; padding-left: 22px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 5px; top: 6px; bottom: 6px;
+    width: 2px; background: var(--border);
+  }
+  .tl-item { position: relative; padding-bottom: 20px; }
+  .tl-item:last-child { padding-bottom: 0; }
+  .tl-item::before {
+    content: ''; position: absolute; left: -21px; top: 6px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--primary); border: 2px solid #fff; box-shadow: 0 0 0 2px var(--primary-bg);
+  }
+  .tl-time { font-size: 12px; color: var(--text-3); }
+  .tl-sent {
+    margin-top: 6px; font-size: 14px; line-height: 1.8; color: var(--text-2);
+    background: #fafafa; padding: 10px 14px; border-radius: 6px;
+  }
+  .tl-sent em { color: var(--primary); font-style: normal; font-weight: 600; }
+  .tl-src { margin-top: 6px; font-size: 12px; color: var(--text-3); }
+  .tl-src a { color: var(--primary); text-decoration: none; }
+
+  .note-area {
+    width: 100%; min-height: 80px; border: 1px solid #d9d9d9; border-radius: 6px;
+    padding: 10px 12px; font-size: 14px; font-family: inherit; outline: none;
+    line-height: 1.7; resize: vertical;
+  }
+  .note-area:focus { border-color: var(--primary); }
+
+  .curve-legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-3); margin-top: 10px; }
+  .curve-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; }
+
+  @media (max-width: 900px) {
+    .grid-2 { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .grades { grid-template-columns: repeat(2, 1fr); }
+  }
+  /* 与现有 GlobalHeader 的断点保持一致 */
+  @media (max-width: 768px) { .site-title { display: none; } .uname { display: none; } }
+  @media (max-width: 576px) {
+    .nav, .fake-search { display: none; }
+    .header-inner { justify-content: space-between; gap: 8px; }
+    .page { padding: 16px; }
+    .capture-input { font-size: 17px; }
+    .capture-input::placeholder { font-size: 16px; }
+    .detail-word { font-size: 32px; }
+    .flip { padding: 28px 20px; }
+    .flip-sent { font-size: 17px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===================== 原型导航（不属于产品） ===================== -->
+<div class="proto-bar">
+  <span class="label">原型页面</span>
+  <button class="proto-tab on" data-s="s1">① 工作台 /word</button>
+  <button class="proto-tab" data-s="s2">② 我的词库 /word/list</button>
+  <button class="proto-tab" data-s="s3">③ 复习 /word/review</button>
+  <button class="proto-tab" data-s="s4">④ 词卡详情 /word/detail/:id</button>
+</div>
+
+<div class="app">
+  <!-- ===================== 站点头部（复刻现有 GlobalHeader） ===================== -->
+  <div class="header">
+    <div class="header-inner">
+      <div class="logo-box">
+        <div class="logo">🐯</div>
+        <div class="site-title">AI 零代码生成平台</div>
+      </div>
+      <div class="nav">
+        <a href="#">首页</a>
+        <a href="#">交流</a>
+        <a href="#" class="on">单词<span class="badge">12</span></a>
+        <a href="#">关于</a>
+      </div>
+      <div class="fake-search">搜索</div>
+      <div class="avatar-box">
+        <div class="avatar">山</div>
+        <div class="uname">山涧听泉</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page">
+
+    <!-- ============================================================ -->
+    <!-- 屏 1：工作台                                                  -->
+    <!-- ============================================================ -->
+    <div class="screen on" id="s1">
+
+      <!-- 录入框：整页最显眼的元素，进页面即聚焦 -->
+      <div class="capture">
+        <input class="capture-input" placeholder="粘贴或输入单词，回车即存" />
+        <div class="capture-foot">
+          <div class="hints">
+            <span class="hint">进页面 <kbd>Ctrl</kbd>+<kbd>V</kbd> 直接录入，不用点输入框</span>
+            <span class="hint">逗号 / 换行 / 空格分隔可一次多个</span>
+            <span class="hint">粘一整句也行，自动挑生词并留住原句</span>
+          </div>
+          <button class="btn btn-primary">录入</button>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <!-- 今日复习：唯一的复习入口，不分词书 tab -->
+        <div class="review-cta">
+          <div>
+            <div class="num">12</div>
+            <div class="lbl">个词等你复习</div>
+            <div class="sub">其中 3 个是你反复忘记的</div>
+          </div>
+          <button class="btn btn-lg">开始复习</button>
+        </div>
+
+        <div class="stats">
+          <div class="stat"><div class="n">348</div><div class="t">总词数</div></div>
+          <div class="stat"><div class="n">+6</div><div class="t">今日新增</div></div>
+          <div class="stat"><div class="n">91</div><div class="t">已掌握</div></div>
+          <div class="stat"><div class="n">23</div><div class="t">连续天数</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>最近录入</span>
+          <span class="more">查看全部词库 →</span>
+        </div>
+
+        <div class="wcard">
+          <div class="wcard-head">
+            <span class="wcard-word">serendipity</span>
+            <span class="wcard-ph">/ˌserənˈdɪpəti/</span>
+            <span class="wcard-spk">🔊</span>
+            <span class="tag tag-new">新词</span>
+          </div>
+          <div class="wcard-tr">n. 意外发现珍奇事物的本领；机缘凑巧</div>
+          <div class="wcard-sent">
+            It was pure <em>serendipity</em> that we met at that tiny bookstore in Kyoto.
+          </div>
+          <div class="wcard-meta">
+            <span>📄 来自 The Guardian</span>
+            <span>·</span>
+            <span>2 分钟前</span>
+          </div>
+        </div>
+
+        <div class="wcard">
+          <div class="wcard-head">
+            <span class="wcard-word">meticulous</span>
+            <span class="wcard-ph">/məˈtɪkjələs/</span>
+            <span class="wcard-spk">🔊</span>
+            <span class="tag tag-learn">学习中</span>
+            <span class="tag tag-exam">六级</span>
+          </div>
+          <div class="wcard-tr">adj. 一丝不苟的；小心翼翼的</div>
+          <div class="wcard-sent">
+            She kept <em>meticulous</em> records of every experiment she ran.
+          </div>
+          <div class="wcard-meta">
+            <span class="encounter">⚡ 第 3 次遇见</span>
+            <span>·</span>
+            <span>📄 来自 Hacker News</span>
+            <span>·</span>
+            <span>1 小时前</span>
+          </div>
+        </div>
+
+        <div class="wcard">
+          <div class="wcard-head">
+            <span class="wcard-word">run</span>
+            <span class="wcard-ph">/rʌn/</span>
+            <span class="wcard-spk">🔊</span>
+            <span class="tag tag-plain">由 running 还原</span>
+          </div>
+          <div class="wcard-tr">v. 跑；经营；运行　n. 奔跑；一段时期</div>
+          <div class="wcard-meta">
+            <span>✍️ 手动录入，无上下文</span>
+            <span>·</span>
+            <span>3 小时前</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 屏 2：我的词库                                                -->
+    <!-- ============================================================ -->
+    <div class="screen" id="s2">
+      <div class="filter-bar">
+        <div class="seg">
+          <span class="on">全部 348</span>
+          <span>新词 42</span>
+          <span>学习中 118</span>
+          <span>复习中 97</span>
+          <span>已掌握 91</span>
+        </div>
+        <div class="spacer"></div>
+        <input class="mini-search" placeholder="搜索单词 / 原句" />
+        <select class="mini-select">
+          <option>最近录入</option>
+          <option>遇见次数</option>
+          <option>最难记的</option>
+          <option>字母序</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="wcard">
+          <div class="wcard-head">
+            <span class="wcard-word">ubiquitous</span>
+            <span class="wcard-ph">/juːˈbɪkwɪtəs/</span>
+            <span class="wcard-spk">🔊</span>
+            <span class="tag tag-review">复习中</span>
+            <span class="tag tag-exam">六级</span>
+          </div>
+          <div class="wcard-tr">adj. 无所不在的；普遍存在的</div>
+          <div class="wcard-sent">
+            Smartphones have become <em>ubiquitous</em> in modern life.
+          </div>
+          <div class="wcard-meta">
+            <span class="encounter">⚡ 第 5 次遇见</span>
+            <span>·</span>
+            <span>下次复习：3 天后</span>
+            <span>·</span>
+            <span>首次录入 2026-03-12</span>
+          </div>
+        </div>
+
+        <div class="wcard">
+          <div class="wcard-head">
+            <span class="wcard-word">adapt / adopt / adept</span>
+            <span class="tag tag-plain">易混词组</span>
+          </div>
+          <div class="wcard-tr">系统检测到这三个词都在你的词库里，已自动组成对比卡</div>
+          <div class="wcard-meta"><span>💡 三期功能占位，一期不做</span></div>
+        </div>
+
+        <div class="wcard">
+          <div class="wcard-head">
+            <span class="wcard-word">ephemeral</span>
+            <span class="wcard-ph">/ɪˈfemərəl/</span>
+            <span class="wcard-spk">🔊</span>
+            <span class="tag tag-learn">学习中</span>
+          </div>
+          <div class="wcard-tr">adj. 短暂的；朝生暮死的</div>
+          <div class="wcard-sent">
+            Fame in the internet age is <em>ephemeral</em> at best.
+          </div>
+          <div class="wcard-meta">
+            <span>📄 来自 某播客文稿</span>
+            <span>·</span>
+            <span>下次复习：明天</span>
+          </div>
+        </div>
+
+        <div class="wcard">
+          <div class="wcard-head">
+            <span class="wcard-word">resilient</span>
+            <span class="wcard-ph">/rɪˈzɪliənt/</span>
+            <span class="wcard-spk">🔊</span>
+            <span class="tag tag-done">已掌握 🎓</span>
+          </div>
+          <div class="wcard-tr">adj. 有弹性的；能迅速恢复的</div>
+          <div class="wcard-meta">
+            <span>连续答对 6 次，已毕业</span>
+            <span>·</span>
+            <span>2026-01-08 收录</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 屏 3：复习                                                    -->
+    <!-- ============================================================ -->
+    <div class="screen" id="s3">
+      <div class="review-wrap">
+        <div class="progress-row">
+          <span>3 / 12</span>
+          <div class="progress"><i></i></div>
+          <span>约 2 分钟</span>
+        </div>
+
+        <div class="flip">
+          <!-- 正面：用你自己遇到过的原句挖空，而不是干巴巴的英译中 -->
+          <div class="flip-src">📄 你在 The Guardian 遇到过它 · 2026-03-12</div>
+          <div class="flip-sent">
+            It was pure <span class="blank">&nbsp;</span> that we met at that tiny
+            bookstore in Kyoto.
+          </div>
+
+          <!-- 背面：点击/空格后展开 -->
+          <div class="flip-answer">
+            <div class="flip-word">serendipity</div>
+            <div class="flip-ph">/ˌserənˈdɪpəti/ 🔊</div>
+            <div class="flip-tr">n. 意外发现珍奇事物的本领；机缘凑巧</div>
+          </div>
+
+          <div class="flip-hint">
+            <kbd>空格</kbd> 翻卡 · <kbd>1</kbd>–<kbd>4</kbd> 评分 · <kbd>Esc</kbd> 退出
+          </div>
+        </div>
+
+        <div class="grades">
+          <div class="grade g0">
+            <div class="g-t">完全忘记</div>
+            <div class="g-s">今天再来</div>
+            <div class="g-k">1</div>
+          </div>
+          <div class="grade g1">
+            <div class="g-t">有点模糊</div>
+            <div class="g-s">1 天后</div>
+            <div class="g-k">2</div>
+          </div>
+          <div class="grade g2">
+            <div class="g-t">想起来了</div>
+            <div class="g-s">4 天后</div>
+            <div class="g-k">3</div>
+          </div>
+          <div class="grade g3">
+            <div class="g-t">秒答</div>
+            <div class="g-s">15 天后</div>
+            <div class="g-k">4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 屏 4：词卡详情                                                -->
+    <!-- ============================================================ -->
+    <div class="screen" id="s4">
+      <div class="card">
+        <div class="detail-head">
+          <div>
+            <div class="detail-word">meticulous</div>
+            <div class="detail-ph">/məˈtɪkjələs/　🔊</div>
+            <div class="detail-tags">
+              <span class="tag tag-learn">学习中</span>
+              <span class="tag tag-exam">六级</span>
+              <span class="tag tag-plain">柯林斯 ★★★</span>
+              <span class="tag tag-plain">词频 4820</span>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;color:var(--text-3)">下次复习</div>
+            <div style="font-size:20px;font-weight:600;margin-top:4px">4 天后</div>
+            <button class="btn btn-ghost" style="margin-top:10px">立即复习</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-2">
+        <div>
+          <div class="card">
+            <div class="card-title">释义</div>
+            <div class="def-block">
+              <div class="def-row"><span class="def-pos">adj.</span><span>一丝不苟的；小心翼翼的；细致的</span></div>
+              <div class="def-row"><span class="def-pos">adj.</span><span>过分注意细节的</span></div>
+              <div class="def-en">
+                showing great attention to detail; very careful and precise
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">
+              <span>遇见记录</span>
+              <span class="tag tag-plain">共 3 次</span>
+            </div>
+            <div class="timeline">
+              <div class="tl-item">
+                <div class="tl-time">2026-07-27 14:32 · 1 小时前</div>
+                <div class="tl-sent">
+                  She kept <em>meticulous</em> records of every experiment she ran.
+                </div>
+                <div class="tl-src">📄 Hacker News · <a href="#">news.ycombinator.com/item?id=...</a></div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-time">2026-06-14 09:11</div>
+                <div class="tl-sent">
+                  The restoration was <em>meticulous</em>, down to the original brass fittings.
+                </div>
+                <div class="tl-src">📄 The Atlantic · <a href="#">theatlantic.com/...</a></div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-time">2026-05-02 22:47</div>
+                <div class="tl-sent">
+                  A <em>meticulous</em> planner, he mapped out every hour of the trip.
+                </div>
+                <div class="tl-src">✍️ 手动录入</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-title">记忆强度</div>
+            <svg viewBox="0 0 320 140" style="width:100%;height:auto">
+              <line x1="30" y1="115" x2="310" y2="115" stroke="#f0f0f0" stroke-width="1"/>
+              <line x1="30" y1="20" x2="30" y2="115" stroke="#f0f0f0" stroke-width="1"/>
+              <!-- 衰减 + 复习拉升，复习一次曲线被抬起来一截 -->
+              <path d="M30,30 C55,70 70,88 85,92 L85,34 C110,72 125,90 140,94 L140,30 C175,68 200,84 225,88 L225,26 C260,55 285,68 310,76"
+                    fill="none" stroke="#1890ff" stroke-width="2.5" stroke-linejoin="round"/>
+              <circle cx="85"  cy="34" r="4" fill="#1890ff"/>
+              <circle cx="140" cy="30" r="4" fill="#1890ff"/>
+              <circle cx="225" cy="26" r="4" fill="#1890ff"/>
+              <circle cx="310" cy="76" r="4" fill="#faad14"/>
+              <text x="6" y="26"  font-size="9" fill="#8c8c8c">强</text>
+              <text x="6" y="118" font-size="9" fill="#8c8c8c">弱</text>
+            </svg>
+            <div class="curve-legend">
+              <span><i style="background:#1890ff"></i>复习节点</span>
+              <span><i style="background:#faad14"></i>当前强度 62%</span>
+            </div>
+            <div style="font-size:12px;color:var(--text-3);margin-top:8px">
+              二期功能，需要 user_word_review_log 支撑
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">私人笔记</div>
+            <textarea class="note-area" placeholder="写点什么帮自己记住它…">词根 meti- 来自拉丁语 metus（恐惧）——「怕出错」所以一丝不苟。</textarea>
+            <div style="margin-top:10px;text-align:right">
+              <button class="btn btn-primary" style="height:32px;font-size:13px">保存</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title">AI 增值（三期）</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <button class="btn btn-ghost" style="width:100%">✨ 结合我的原句生成助记</button>
+              <button class="btn btn-ghost" style="width:100%">📖 讲讲这个词的来历</button>
+              <button class="btn btn-ghost" style="width:100%">📝 用我今天的生词写一篇短文</button>
+              <button class="btn btn-ghost" style="width:100%">🎮 把这周生词做成闪卡小游戏</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="proto-note">
+  说明：本页为静态视觉原型，仅供确认布局与信息层级，交互均未实现。配色与圆角、阴影、断点沿用现有
+  GlobalHeader / BasicLayout 的规范。屏 ④ 中的「记忆强度」为二期功能、「AI 增值」为三期功能，一期不做。
+</div>
+
+<script>
+  document.querySelectorAll('.proto-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.proto-tab').forEach(function (t) { t.classList.remove('on') })
+      document.querySelectorAll('.screen').forEach(function (s) { s.classList.remove('on') })
+      tab.classList.add('on')
+      document.getElementById(tab.dataset.s).classList.add('on')
+      window.scrollTo({ top: 0 })
+    })
+  })
+</script>
+
+</body>
+</html>

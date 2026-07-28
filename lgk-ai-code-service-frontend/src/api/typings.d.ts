@@ -94,6 +94,24 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseListWordCardVO = {
+    code?: number
+    data?: WordCardVO[]
+    message?: string
+  }
+
+  type BaseResponseListWordDict = {
+    code?: number
+    data?: WordDict[]
+    message?: string
+  }
+
+  type BaseResponseListWordReviewCardVO = {
+    code?: number
+    data?: WordReviewCardVO[]
+    message?: string
+  }
+
   type BaseResponseLoginUserVO = {
     code?: number
     data?: LoginUserVO
@@ -136,6 +154,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponsePageWordCardVO = {
+    code?: number
+    data?: PageWordCardVO
+    message?: string
+  }
+
   type BaseResponsePostVO = {
     code?: number
     data?: PostVO
@@ -163,6 +187,18 @@ declare namespace API {
   type BaseResponseUserVO = {
     code?: number
     data?: UserVO
+    message?: string
+  }
+
+  type BaseResponseWordCardVO = {
+    code?: number
+    data?: WordCardVO
+    message?: string
+  }
+
+  type BaseResponseWordStatisticsVO = {
+    code?: number
+    data?: WordStatisticsVO
     message?: string
   }
 
@@ -259,6 +295,10 @@ declare namespace API {
     description?: string
   }
 
+  type dictSearchParams = {
+    keyword: string
+  }
+
   type downloadAppCodeParams = {
     appId: number
   }
@@ -307,6 +347,10 @@ declare namespace API {
 
   type getUserVOByIdParams = {
     id: number
+  }
+
+  type getWordCardVOParams = {
+    userWordId: number
   }
 
   type IllustrationTask = {
@@ -405,6 +449,15 @@ declare namespace API {
 
   type PageUserVO = {
     records?: UserVO[]
+    pageNumber?: number
+    pageSize?: number
+    totalPage?: number
+    totalRow?: number
+    optimizeCountQuery?: boolean
+  }
+
+  type PageWordCardVO = {
+    records?: WordCardVO[]
     pageNumber?: number
     pageSize?: number
     totalPage?: number
@@ -613,6 +666,105 @@ declare namespace API {
     videoReview?: number
     tag?: string
     duration?: string
+  }
+
+  type WordCaptureRequest = {
+    text?: string
+    sentence?: string
+    sourceTitle?: string
+    sourceUrl?: string
+    channel?: string
+  }
+
+  type WordCardVO = {
+    userWordId?: number
+    dictId?: number
+    spelling?: string
+    mastery?: number
+    encounterNum?: number
+    reviewCount?: number
+    dueTime?: string
+    note?: string
+    createTime?: string
+    phonetic?: string
+    translation?: string
+    definition?: string
+    pos?: string
+    exchange?: string
+    tag?: string
+    source?: string
+    newlyAdded?: boolean
+    sightings?: WordSightingVO[]
+    easeFactor?: number
+  }
+
+  type WordDict = {
+    id?: number
+    lang?: string
+    spelling?: string
+    phonetic?: string
+    translation?: string
+    definition?: string
+    pos?: string
+    exchange?: string
+    tag?: string
+    frq?: number
+    bnc?: number
+    collins?: number
+    oxford?: number
+    extInfo?: string
+    source?: string
+    createTime?: string
+    updateTime?: string
+  }
+
+  type WordNoteUpdateRequest = {
+    userWordId?: number
+    note?: string
+  }
+
+  type WordQueryRequest = {
+    pageNum?: number
+    pageSize?: number
+    sortField?: string
+    sortOrder?: string
+    mastery?: number
+    keyword?: string
+    bookId?: number
+  }
+
+  type WordReviewCardVO = {
+    userWordId?: number
+    spelling?: string
+    phonetic?: string
+    translation?: string
+    definition?: string
+    pos?: string
+    clozeSentence?: string
+    sourceTitle?: string
+  }
+
+  type WordReviewSubmitRequest = {
+    userWordId?: number
+    quality?: number
+    costMs?: number
+  }
+
+  type WordSightingVO = {
+    id?: number
+    sentence?: string
+    sourceTitle?: string
+    sourceUrl?: string
+    channel?: string
+    createTime?: string
+  }
+
+  type WordStatisticsVO = {
+    totalCount?: number
+    todayNewCount?: number
+    dueCount?: number
+    masteredCount?: number
+    streakDays?: number
   }
 
   type WorkflowContext = {

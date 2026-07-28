@@ -4,6 +4,8 @@
 // API 唯一标识：
 import * as chatHistoryController from './chatHistoryController'
 import * as workflowSseController from './workflowSseController'
+import * as wordReviewController from './wordReviewController'
+import * as wordController from './wordController'
 import * as userController from './userController'
 import * as thumbController from './thumbController'
 import * as searchController from './searchController'
@@ -19,6 +21,8 @@ import * as healthController from './healthController'
 export default {
   chatHistoryController,
   workflowSseController,
+  wordReviewController,
+  wordController,
   userController,
   thumbController,
   searchController,
