@@ -16,7 +16,8 @@ public enum FileUploadBizEnum {
 
     USER_AVATAR("用户头像", "user_avatar"),
     COMMENT_FILE("评论文件", "comment_file"),
-    USER_POST("用户帖子", "user_post");
+    USER_POST("用户帖子", "user_post"),
+    WORD_OCR("单词拍照录入", "word_ocr");
 
     private final String text;
 

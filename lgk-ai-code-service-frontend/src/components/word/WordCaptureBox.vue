@@ -2,6 +2,7 @@
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import { capture } from '@/api/wordController'
+import WordOcrCaptureModal from './WordOcrCaptureModal.vue'
 
 const emit = defineEmits<{
   // 录入成功，把新卡片交给父组件做乐观插入
@@ -12,6 +13,12 @@ const inputText = ref('')
 const submitting = ref(false)
 const rootRef = ref<HTMLElement>()
 const inputRef = ref<HTMLInputElement>()
+const ocrOpen = ref(false)
+
+// 拍照录入走的是同一条 capture 接口，卡片照样交给父组件乐观插入
+function onOcrCaptured(cards: API.WordCardVO[]) {
+  emit('captured', cards)
+}
 
 async function submit(text?: string) {
   const raw = (text ?? inputText.value).trim()
@@ -58,6 +65,8 @@ function notify(cards: API.WordCardVO[]) {
  * 焦点在其它 input/textarea 里时不抢（只在焦点为空或就在本组件内时接管）。
  */
 function onPaste(e: ClipboardEvent) {
+  // 拍照录入弹窗开着时不抢粘贴，免得在背后偷偷录了一条
+  if (ocrOpen.value) return
   const el = document.activeElement as HTMLElement | null
   const editable =
     !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
@@ -92,12 +101,17 @@ onBeforeUnmount(() => {
     />
     <div class="capture-foot">
       <div class="hints">
-        <span class="hint">进页面 <kbd>Ctrl</kbd>+<kbd>V</kbd> 直接录入，不用点输入框</span>
+        <span class="hint hint-kbd">进页面 <kbd>Ctrl</kbd>+<kbd>V</kbd> 直接录入，不用点输入框</span>
         <span class="hint">逗号 / 换行 / 空格分隔可一次多个</span>
         <span class="hint">粘一整句也行，自动挑生词并留住原句</span>
       </div>
-      <a-button type="primary" :loading="submitting" @click="submit()">录入</a-button>
+      <div class="foot-btns">
+        <a-button class="ocr-btn" @click="ocrOpen = true">📷 拍照录入</a-button>
+        <a-button type="primary" :loading="submitting" @click="submit()">录入</a-button>
+      </div>
     </div>
+
+    <WordOcrCaptureModal v-model:open="ocrOpen" @captured="onOcrCaptured" />
   </div>
 </template>
 
@@ -155,12 +169,40 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-family: inherit;
 }
+.foot-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ocr-btn {
+  color: #1890ff;
+  border-color: #91caff;
+  background: #e6f4ff;
+}
+.ocr-btn:hover {
+  color: #096dd9;
+  border-color: #1890ff;
+}
 @media (max-width: 576px) {
+  .capture {
+    padding: 16px;
+  }
   .capture-input {
     font-size: 17px;
   }
   .capture-input::placeholder {
     font-size: 16px;
+  }
+  /* 手机上没有 Ctrl+V 这回事，把位置让给按钮 */
+  .hint-kbd {
+    display: none;
+  }
+  .foot-btns {
+    width: 100%;
+  }
+  .foot-btns :deep(.ant-btn) {
+    flex: 1;
+    height: 40px;
   }
 }
 </style>

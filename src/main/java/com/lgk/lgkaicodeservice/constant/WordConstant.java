@@ -58,6 +58,50 @@ public interface WordConstant {
      */
     String CHANNEL_EXTENSION = "extension";
 
+    /**
+     * 拍照录入：上传便利贴照片，VL 模型识别出单词后批量录入
+     */
+    String CHANNEL_OCR = "ocr";
+
+    // ==================== 拍照录入（OCR）====================
+
+    /**
+     * 单个识别任务的图片张数上限
+     */
+    int MAX_OCR_IMAGES = 5;
+
+    /**
+     * 识别任务在 Redis 中的存活时间（秒），1 小时。
+     * 结果一旦确认入库便无价值，纯临时态，不落库
+     */
+    long OCR_TASK_TTL_SECONDS = 60 * 60L;
+
+    /**
+     * 压缩后图片最长边（像素）。手机照片动辄 4000px，压到这个尺寸
+     * 既能让 VL 看清手写字，又能把体积压进 MinIO 的 1MB 限制
+     */
+    int OCR_IMAGE_MAX_EDGE = 1600;
+
+    /**
+     * 压缩输出的 JPEG 质量，0.82 是手写识别清晰度与体积的平衡点
+     */
+    float OCR_IMAGE_JPEG_QUALITY = 0.82f;
+
+    /**
+     * 上传原图大小上限（字节），10MB。超出直接拒绝，避免压缩时撑爆内存
+     */
+    long MAX_OCR_UPLOAD_BYTES = 10 * 1024 * 1024L;
+
+    /**
+     * 允许的图片后缀
+     */
+    java.util.List<String> OCR_ALLOWED_SUFFIX = java.util.List.of("jpg", "jpeg", "png", "webp", "heic", "bmp");
+
+    /**
+     * OCR 提取的中文释义长度上限，超出截断后写入 user_word.note
+     */
+    int MAX_OCR_TRANSLATION_LENGTH = 256;
+
     // ==================== 词书 ====================
 
     /**

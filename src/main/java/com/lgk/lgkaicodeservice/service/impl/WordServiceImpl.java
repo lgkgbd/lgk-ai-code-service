@@ -81,18 +81,37 @@ public class WordServiceImpl extends ServiceImpl<UserWordMapper, UserWord> imple
         String sentence = truncate(request.getSentence(), WordConstant.MAX_SENTENCE_LENGTH);
         String channel = StringUtils.hasText(request.getChannel())
                 ? request.getChannel() : WordConstant.CHANNEL_MANUAL;
+        // 拍照录入带来的「词→手写释义」，key 统一小写以便按原词/原形两种拼写命中
+        Map<String, String> translations = normalizeTranslations(request.getTranslations());
 
         // 3. 逐词处理，单个词失败不影响其余（批量 50 词的健壮性）
         List<WordCardVO> cards = new ArrayList<>();
         for (String rawWord : parsed.getWords()) {
             try {
                 cards.add(captureOne(rawWord, userId, personalBook.getId(),
-                        sentence, request.getSourceTitle(), request.getSourceUrl(), channel));
+                        sentence, request.getSourceTitle(), request.getSourceUrl(), channel,
+                        translations, request.getImageUrl()));
             } catch (Exception e) {
                 log.error("录入单词失败，跳过，word={}, userId={}", rawWord, userId, e);
             }
         }
         return cards;
+    }
+
+    /**
+     * 释义 map 的 key 统一 trim + 转小写，空值剔除
+     */
+    private static Map<String, String> normalizeTranslations(Map<String, String> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, String> normalized = new HashMap<>(raw.size());
+        raw.forEach((k, v) -> {
+            if (StringUtils.hasText(k) && StringUtils.hasText(v)) {
+                normalized.put(k.trim().toLowerCase(), v.trim());
+            }
+        });
+        return normalized;
     }
 
     /**
@@ -104,9 +123,13 @@ public class WordServiceImpl extends ServiceImpl<UserWordMapper, UserWord> imple
      *   <li>有原句则追加一条 sighting</li>
      *   <li>写 Redis 待复习队列</li>
      * </ol>
+     *
+     * @param translations 词→手写释义（拍照录入专用），可空
+     * @param imageUrl     来源图片短链（拍照录入专用），可空
      */
     private WordCardVO captureOne(String rawWord, long userId, long bookId,
-                                  String sentence, String sourceTitle, String sourceUrl, String channel) {
+                                  String sentence, String sourceTitle, String sourceUrl, String channel,
+                                  Map<String, String> translations, String imageUrl) {
         String lemma = wordTextParser.restoreLemma(rawWord);
         WordDict dict = wordDictService.resolveAndSave(lemma, WordConstant.DEFAULT_LANG);
 
@@ -152,14 +175,18 @@ public class WordServiceImpl extends ServiceImpl<UserWordMapper, UserWord> imple
         // 词加入个人生词本（幂等）
         wordBookService.addWord(bookId, dict.getId());
 
-        // 有原句才留 sighting；纯单个词无上下文，复习时用词典例句兜底
-        if (StringUtils.hasText(sentence)) {
+        // 词典没有释义时，用便利贴上手写的释义补上（只落该用户私有的 note）
+        applyPrivateTranslation(userWord, dict, pickTranslation(translations, rawWord, lemma));
+
+        // 有原句 or 有来源图才留 sighting；纯单个词无上下文，复习时用词典例句兜底
+        String source = StringUtils.hasText(imageUrl) ? imageUrl : sourceUrl;
+        if (StringUtils.hasText(sentence) || StringUtils.hasText(imageUrl)) {
             UserWordSighting sighting = UserWordSighting.builder()
                     .userWordId(userWord.getId())
                     .userId(userId)
                     .sentence(sentence)
                     .sourceTitle(truncate(sourceTitle, 256))
-                    .sourceUrl(truncate(sourceUrl, WordConstant.MAX_SENTENCE_LENGTH))
+                    .sourceUrl(truncate(source, WordConstant.MAX_SENTENCE_LENGTH))
                     .channel(channel)
                     .createTime(LocalDateTime.now())
                     .build();
@@ -170,6 +197,56 @@ public class WordServiceImpl extends ServiceImpl<UserWordMapper, UserWord> imple
         dueQueue.upsert(userId, userWord.getId(), userWord.getDueTime());
 
         return toCard(userWord, dict, newlyAdded, null);
+    }
+
+    /**
+     * 取该词对应的手写释义。
+     * <p>
+     * 先按用户写的原词查（便利贴上写的是 running），再按还原后的原形查（run），
+     * 两种拼写都能命中
+     */
+    private static String pickTranslation(Map<String, String> translations, String rawWord, String lemma) {
+        if (translations == null || translations.isEmpty()) {
+            return null;
+        }
+        String byRaw = rawWord == null ? null : translations.get(rawWord.trim().toLowerCase());
+        if (StringUtils.hasText(byRaw)) {
+            return byRaw;
+        }
+        return lemma == null ? null : translations.get(lemma.trim().toLowerCase());
+    }
+
+    /**
+     * 把手写释义写进用户私有笔记（拍照录入的 B 方案）
+     * <p>
+     * 三道闸门，任何一道不过就跳过：
+     * <ol>
+     *   <li>没识别出释义 —— 无事可做</li>
+     *   <li><b>平台词典已有释义</b> —— 以词典为准，手写释义丢弃。词典数据比手写的准</li>
+     *   <li><b>用户已写过笔记</b> —— 尊重用户，绝不覆盖。这是用户自己的地盘</li>
+     * </ol>
+     * 全程只碰 {@code user_word.note}（用户私有），不写 {@code word_dict.translation}（全用户共享），
+     * 因此一个人抄错的释义永远不会影响到别人。
+     */
+    private void applyPrivateTranslation(UserWord userWord, WordDict dict, String translation) {
+        if (!StringUtils.hasText(translation)) {
+            return;
+        }
+        if (dict != null && StringUtils.hasText(dict.getTranslation())) {
+            return;
+        }
+        if (StringUtils.hasText(userWord.getNote())) {
+            return;
+        }
+        String note = truncate(translation.trim(), WordConstant.MAX_NOTE_LENGTH);
+        UpdateChain.of(UserWord.class)
+                .set(UserWord::getNote, note)
+                .set(UserWord::getUpdateTime, LocalDateTime.now())
+                .where(UserWord::getId).eq(userWord.getId())
+                .update();
+        // 同步到内存对象，好让本次返回的词卡就能带上释义
+        userWord.setNote(note);
+        log.info("词典无释义，采用手写释义写入私有笔记，word={}, note={}", userWord.getSpelling(), note);
     }
 
     /**

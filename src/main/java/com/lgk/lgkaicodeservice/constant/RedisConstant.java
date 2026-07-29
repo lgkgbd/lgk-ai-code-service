@@ -126,4 +126,23 @@ public interface RedisConstant {
         return String.format("%s%s:%s", WORD_DICT_KEY_PREFIX, lang, spelling);
     }
 
+    // ==================== 拍照录入（OCR）====================
+
+    /**
+     * 拍照识别任务 Key 前缀，String 结构存 JSON
+     * 格式: word:ocr:task:{taskId}，TTL 1h
+     * 识别结果确认入库后即失去价值，故只放 Redis 不落库
+     */
+    String WORD_OCR_TASK_KEY_PREFIX = "word:ocr:task:";
+
+    /**
+     * 获取拍照识别任务 Key
+     *
+     * @param taskId 任务 id
+     * @return Redis Key
+     */
+    static String getWordOcrTaskKey(String taskId) {
+        return WORD_OCR_TASK_KEY_PREFIX + taskId;
+    }
+
 }

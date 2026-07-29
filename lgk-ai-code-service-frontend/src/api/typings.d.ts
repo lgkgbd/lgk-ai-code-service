@@ -196,6 +196,12 @@ declare namespace API {
     message?: string
   }
 
+  type BaseResponseWordOcrTaskVO = {
+    code?: number
+    data?: WordOcrTaskVO
+    message?: string
+  }
+
   type BaseResponseWordStatisticsVO = {
     code?: number
     data?: WordStatisticsVO
@@ -321,6 +327,10 @@ declare namespace API {
 
   type getAppVOByIdParams = {
     id: number
+  }
+
+  type getImageCaptureResultParams = {
+    taskId: string
   }
 
   type getInfoParams = {
@@ -674,6 +684,8 @@ declare namespace API {
     sourceTitle?: string
     sourceUrl?: string
     channel?: string
+    translations?: Record<string, string>
+    imageUrl?: string
   }
 
   type WordCardVO = {
@@ -721,6 +733,23 @@ declare namespace API {
   type WordNoteUpdateRequest = {
     userWordId?: number
     note?: string
+  }
+
+  type WordOcrItemVO = {
+    word?: string
+    translation?: string
+  }
+
+  type WordOcrTaskVO = {
+    taskId?: string
+    userId?: number
+    status?: string
+    totalImages?: number
+    doneImages?: number
+    imageUrls?: string[]
+    items?: WordOcrItemVO[]
+    errorMsg?: string
+    createTime?: number
   }
 
   type WordQueryRequest = {

@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
 
@@ -83,6 +84,36 @@ public class StorageManager {
             throw e;
         } catch (Exception e) {
             log.error("StorageManager 上传 MultipartFile 失败，key={}", key, e);
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件上传失败");
+        }
+    }
+
+    /**
+     * 上传内存字节，返回短链 code
+     * <p>
+     * 适用于服务端就地生成 / 加工出的二进制内容（如压缩后的图片），
+     * 这类数据没有对应的 MultipartFile 或本地临时文件。
+     * </p>
+     *
+     * @param key         对象键（MinIO 内部存储路径）
+     * @param bytes       文件内容
+     * @param contentType 内容类型，例如 image/jpeg；为空则按二进制流处理
+     * @return 短链 code
+     */
+    public String uploadBytes(String key, byte[] bytes, String contentType) {
+        if (bytes == null || bytes.length == 0) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "上传内容为空");
+        }
+        validateFileSize(bytes.length);
+        String type = (contentType == null || contentType.isBlank())
+                ? "application/octet-stream" : contentType;
+        try (InputStream is = new ByteArrayInputStream(bytes)) {
+            String objectKey = fileStorageStrategy.uploadStream(key, is, type, bytes.length);
+            return shortLinkService.createShortLink(objectKey);
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("StorageManager 上传字节失败，key={}", key, e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "文件上传失败");
         }
     }

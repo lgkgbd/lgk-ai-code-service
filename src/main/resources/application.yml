@@ -34,6 +34,12 @@ spring:
     uris: http://localhost:9200
     username: elastic
     password: 123456
+  # 文件上传：默认单文件上限 1MB，手机直出照片普遍 3~5MB 会被直接拒收，
+  # 故放宽到 10MB。服务端会先压缩到 1600px/JPEG 再存 MinIO 与送 VL 识别
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 55MB
 
 server:
   port: 8123
@@ -112,6 +118,8 @@ pexels:
 dashscope:
   api-key: <Your API Key>
   image-model: wan2.2-t2i-flash
+  # 单词拍照录入用的多模态视觉模型（手写便利贴识别）
+  vl-model: qwen3-vl-plus
 
 # Canal 配置
 canal:

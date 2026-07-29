@@ -12,8 +12,10 @@ import com.lgk.lgkaicodeservice.model.dto.word.WordQueryRequest;
 import com.lgk.lgkaicodeservice.model.entity.User;
 import com.lgk.lgkaicodeservice.model.entity.WordDict;
 import com.lgk.lgkaicodeservice.model.vo.WordCardVO;
+import com.lgk.lgkaicodeservice.model.vo.WordOcrTaskVO;
 import com.lgk.lgkaicodeservice.model.vo.WordStatisticsVO;
 import com.lgk.lgkaicodeservice.service.WordDictService;
+import com.lgk.lgkaicodeservice.service.WordOcrService;
 import com.lgk.lgkaicodeservice.service.WordService;
 import com.lgk.lgkaicodeservice.service.word.Bookmarklet;
 import com.mybatisflex.core.paginate.Page;
@@ -21,6 +23,7 @@ import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import com.lgk.lgkaicodeservice.service.UserService;
 
 import java.util.List;
@@ -41,6 +44,9 @@ public class WordController {
     private WordDictService wordDictService;
 
     @Resource
+    private WordOcrService wordOcrService;
+
+    @Resource
     private UserService userService;
 
     /**
@@ -53,6 +59,38 @@ public class WordController {
         User loginUser = userService.getLoginUser(request);
         List<WordCardVO> cards = wordService.capture(wordCaptureRequest, loginUser);
         return ResultUtils.success(cards);
+    }
+
+    /**
+     * 拍照录入 —— 提交识别任务（立即返回，不阻塞）
+     * <p>
+     * 把便利贴拍下来上传，后台用 VL 模型识别出其中的英文单词。VL 单张要 2~5 秒，
+     * 所以这里只建任务就返回 taskId，前端拿它轮询 {@code /word/capture/image/result}。
+     * <p>
+     * 识别结果<b>不会自动入库</b>：手写识别不可能全对，需用户在前端确认改错后
+     * 再调 {@code /word/capture} 正式录入。
+     *
+     * @param files 图片，1~5 张
+     * @return 任务 id
+     */
+    @PostMapping("/capture/image")
+    public BaseResponse<String> captureFromImage(@RequestPart("files") MultipartFile[] files,
+                                                 HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(wordOcrService.submit(files, loginUser));
+    }
+
+    /**
+     * 拍照录入 —— 查询识别进度 / 结果
+     * <p>
+     * 前端每 1 秒轮询一次，直到 status 为 succeed 或 failed
+     *
+     * @param taskId 提交时返回的任务 id
+     */
+    @GetMapping("/capture/image/result")
+    public BaseResponse<WordOcrTaskVO> getImageCaptureResult(String taskId, HttpServletRequest request) {
+        User loginUser = userService.getLoginUser(request);
+        return ResultUtils.success(wordOcrService.getTask(taskId, loginUser));
     }
 
     /**
